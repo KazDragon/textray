@@ -24,7 +24,9 @@ find_package(Threads)
         
 add_executable(munin_acceptance
     src/application.cpp
+    src/client.cpp
     src/connection.cpp
+    src/context_impl.cpp
     src/main.cpp
     src/server.cpp
     src/socket.cpp

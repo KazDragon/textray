@@ -133,7 +133,7 @@ struct connection::impl
                     
         socket_->async_read(
             amount,
-            [this](auto &&data)
+            [this, amount](auto &&data)
             {
                 this->on_data(data);
             });

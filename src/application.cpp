@@ -2,6 +2,9 @@
 #include "connection.hpp"
 #include "server.hpp"
 #include "socket.hpp"
+#include "camera.hpp"
+#include "client.hpp"
+#include "context_impl.hpp"
 #include <boost/asio/io_service.hpp>
 #include <boost/asio/placeholders.hpp>
 #include <map>
@@ -29,8 +32,8 @@ public :
             , [this](auto socket){
                   this->on_accept(socket);
               }))
-//        , context_(std::make_shared<context_impl>(
-  //            std::ref(io_service), server_, std::ref(work)))
+        , context_(std::make_shared<context_impl>(
+              std::ref(io_service), server_, std::ref(work)))
     {
     }
 
@@ -86,6 +89,7 @@ private :
         
         if (socket != NULL && connection != NULL)
         {
+            printf("Clearing pending connection\n");
             auto pending_connection =
                 std::find(
                     pending_connections_.begin()
@@ -101,7 +105,7 @@ private :
             
             pending_connections_.erase(pending_connection);
 
-/*
+            printf("Creating client\n");
             auto client =
                 std::make_shared<ma::client>(std::ref(io_service_), context_);
             client->set_connection(connection);
@@ -111,25 +115,25 @@ private :
               , this
               , std::weak_ptr<ma::client>(client)));
 
+  
+            printf("Adding client\n");
             context_->add_client(client);
-            context_->update_names();
-*/            
+
+            printf("Setting window size\n");
             // If the window's size has been set by the NAWS process,
             // then update it to that.  Otherwise, use the standard 80,24.
             auto psize = pending_sizes_.find(connection);
             
             if (psize != pending_sizes_.end())
             {
-                /*
                 client->set_window_size(
                     psize->second.first
                   , psize->second.second);
-                 */
                 pending_sizes_.erase(connection);
             }
             else
             {
-                //client->set_window_size(80, 24);
+                client->set_window_size(80, 24);
             }
         }
     }
@@ -155,7 +159,6 @@ private :
     // ======================================================================
     // ON_CLIENT_DEATH
     // ======================================================================
-    /*
     void on_client_death(std::weak_ptr<ma::client> &weak_client)
     {
         auto client = weak_client.lock();
@@ -163,27 +166,9 @@ private :
         if (client != NULL)
         {
             context_->remove_client(client);
-            context_->update_names();
-    
-            auto character = client->get_character();
-            
-            if (character != NULL)
-            {
-                auto name = character->get_name();
-            
-                if (!name.empty())
-                {
-                    ma::send_to_all(
-                        context_
-                      , "#SERVER: "
-                      + context_->get_moniker(character)
-                      + " has left ma.\n");
-                }
-            }
         }
     }
-    */
-    
+
     // ======================================================================
     // ON_WINDOW_SIZE_CHANGED
     // ======================================================================
@@ -205,7 +190,7 @@ private :
     
     boost::asio::io_service      &io_service_;
     std::shared_ptr<ma::server>   server_;
-    //std::shared_ptr<ma::context>  context_;
+    std::shared_ptr<ma::context>  context_;
     
     // A vector of clients whose connections are being negotiated.
     std::vector<std::shared_ptr<ma::connection>> pending_connections_;
