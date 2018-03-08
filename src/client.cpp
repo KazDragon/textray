@@ -25,12 +25,13 @@
 //             SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 // ==========================================================================
 #include "client.hpp"
+#include "camera.hpp"
 #include "connection.hpp"
 #include "context.hpp"
+#include "floorplan.hpp"
 #include "lambda_visitor.hpp"
+#include <munin/aligned_layout.hpp>
 #include <munin/container.hpp>
-#include <munin/filled_box.hpp>
-#include <munin/grid_layout.hpp>
 #include <munin/window.hpp>
 #include <terminalpp/ansi_terminal.hpp>
 #include <terminalpp/canvas.hpp>
@@ -122,6 +123,19 @@ namespace {
 */
 }
 
+namespace {
+
+floorplan level_map = {{
+ { 1, 1, 2, 2, 3 },
+ { 3, 0, 0, 0, 4 },
+ { 4, 0, 0, 0, 5 },
+ { 5, 0, 0, 0, 6 },
+ { 7, 7, 8, 8, 9 }
+
+}};
+
+}
+
 // ==========================================================================
 // CLIENT IMPLEMENTATION STRUCTURE
 // ==========================================================================
@@ -149,11 +163,18 @@ public :
       : self_(self),
         context_(ctx),
         canvas_({80, 24}),
-        terminal_(impl::create_behaviour())
+        terminal_(impl::create_behaviour()),
+        floorplan_(std::make_shared<floorplan>(level_map)),
+        position_({1, 1}),
+        heading_(0.0)
     {
         auto ui = std::make_shared<munin::container>();
-        ui->set_layout(std::unique_ptr<munin::layout>(new munin::grid_layout({1, 1})));
-        ui->add_component(std::make_shared<munin::filled_box>('x'));
+        ui->set_layout(std::unique_ptr<munin::layout>(new munin::aligned_layout()));
+
+        ui->add_component(
+            std::make_shared<camera>(floorplan_, position_, heading_),
+            munin::alignment_hcvc);
+
         window_ = std::make_shared<munin::window>(ui);
 
     }
@@ -382,6 +403,10 @@ private :
     
     terminalpp::canvas                      canvas_;
     terminalpp::ansi_terminal               terminal_;
+    
+    std::shared_ptr<floorplan>              floorplan_;
+    point                                   position_;
+    double                                  heading_;
 };
 
 // ==========================================================================
