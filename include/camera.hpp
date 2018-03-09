@@ -33,6 +33,8 @@ private :
     //* =====================================================================
     void do_draw(
         terminalpp::canvas_view &cv, munin::rectangle const &region) const override;
+
+    void do_set_size(terminalpp::extent const &size) override;
     
     std::shared_ptr<munin::image> image_;
     std::shared_ptr<floorplan> floorplan_;

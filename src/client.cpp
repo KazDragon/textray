@@ -165,7 +165,7 @@ public :
         canvas_({80, 24}),
         terminal_(impl::create_behaviour()),
         floorplan_(std::make_shared<floorplan>(level_map)),
-        position_({1, 1}),
+        position_({1, 4}),
         heading_(0.0)
     {
         auto ui = std::make_shared<munin::container>();
@@ -351,6 +351,8 @@ public :
     // ======================================================================
     void set_window_size(std::uint16_t width, std::uint16_t height)
     {
+        printf("client::set_window_size(%d,%d)\n", width, height);
+        
         if (canvas_.size() != terminalpp::extent{width, height})
         {
             canvas_ = terminalpp::canvas({width, height});
