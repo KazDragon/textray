@@ -12,7 +12,15 @@ namespace ma {
 class camera : public munin::basic_component
 {
 public :
+    //* =====================================================================
+    /// \brief Constructor
+    //* =====================================================================
     camera(std::shared_ptr<floorplan> plan, point position, double heading);
+
+    //* =====================================================================
+    /// \brief Move to the specified position and heading.
+    //* =====================================================================
+    void move_to(point position, double heading);
 
 private :
     //* =====================================================================

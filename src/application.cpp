@@ -5,6 +5,8 @@
 #include "camera.hpp"
 #include "client.hpp"
 #include "context_impl.hpp"
+#include <munin/aligned_layout.hpp>
+#include <munin/container.hpp>
 #include <boost/asio/io_service.hpp>
 #include <boost/asio/placeholders.hpp>
 #include <map>
@@ -105,10 +107,9 @@ private :
             
             pending_connections_.erase(pending_connection);
 
-            printf("Creating client\n");
             auto client =
-                std::make_shared<ma::client>(std::ref(io_service_), context_);
-            client->set_connection(connection);
+                std::make_shared<ma::client>(std::ref(io_service_));
+            client->connect(connection);
             
             client->on_connection_death(bind(
                 &impl::on_client_death
@@ -116,10 +117,8 @@ private :
               , std::weak_ptr<ma::client>(client)));
 
   
-            printf("Adding client\n");
             context_->add_client(client);
 
-            printf("Setting window size\n");
             // If the window's size has been set by the NAWS process,
             // then update it to that.  Otherwise, use the standard 80,24.
             auto psize = pending_sizes_.find(connection);

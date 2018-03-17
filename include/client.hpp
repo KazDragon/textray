@@ -35,21 +35,22 @@ namespace boost { namespace asio {
     class io_service;
 }}
 
+namespace munin {
+    class component;
+}
+
 namespace ma {
 
-class context;
 class connection;
 
 class client
-    : public std::enable_shared_from_this<client>
 {
 public :
     //* =====================================================================
     /// \brief Constructor
     //* =====================================================================
     client(
-        boost::asio::io_service  &io_service
-      , std::shared_ptr<context>  ctx);
+        boost::asio::io_service &io_service);
 
     //* =====================================================================
     /// \brief Destructor
@@ -59,17 +60,7 @@ public :
     //* =====================================================================
     /// \brief Sets the connection on which this client operates.
     //* =====================================================================
-    void set_connection(std::shared_ptr<connection> const &new_connection);
-
-    //* =====================================================================
-    /// \brief Gets the user interface for the client.
-    //* =====================================================================
-    // std::shared_ptr<munin::component> get_user_interface();
-
-    //* =====================================================================
-    /// \brief Gets the window for the client.
-    //* =====================================================================
-    // std::shared_ptr<munin::window> get_window();
+    void connect(std::shared_ptr<connection> const &cnx);
 
     //* =====================================================================
     /// \brief Sets the title of the client's window
@@ -80,26 +71,6 @@ public :
     /// \brief Sets the size of the client's window
     //* =====================================================================
     void set_window_size(std::uint16_t width, std::uint16_t height);
-
-    //* =====================================================================
-    /// \brief Sets the account that the client is currently using.
-    //* =====================================================================
-    //void set_account(std::shared_ptr<account> const &acc);
-
-    //* =====================================================================
-    /// \brief Retrieves the account that the client is currently using.
-    //* =====================================================================
-    //std::shared_ptr<account> get_account() const;
-
-    //* =====================================================================
-    /// \brief Sets the character that the client is currently using.
-    //* =====================================================================
-    //void set_character(std::shared_ptr<character> const &ch);
-
-    //* =====================================================================
-    /// \brief Retreives the character that the client is currently using.
-    //* =====================================================================
-    //std::shared_ptr<character> get_character() const;
 
     //* =====================================================================
     /// \brief Disconnects the client from the server.
