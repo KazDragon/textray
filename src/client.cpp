@@ -29,7 +29,9 @@
 #include "connection.hpp"
 #include "floorplan.hpp"
 #include "lambda_visitor.hpp"
+#include <munin/compass_layout.hpp>
 #include <munin/container.hpp>
+#include <munin/filled_box.hpp>
 #include <munin/grid_layout.hpp>
 #include <munin/window.hpp>
 #include <terminalpp/ansi_terminal.hpp>
@@ -92,10 +94,24 @@ public :
         heading_(210 * M_PI/180),
         camera_(std::make_shared<camera>(floorplan_, position_, heading_))
     {
+        using namespace terminalpp::literals;
+        auto const status_text = std::vector<terminalpp::string> {
+            "\\[0\\]4AMMO: 16"_ets,
+            "\\[0\\]4LEVEL: 4"_ets
+        };
+        auto const fill = "\\[0\\]4 "_ets[0];
+
+        auto status_bar  = std::make_shared<munin::image>(status_text, fill);
+        auto status_fill = std::make_shared<munin::filled_box>(fill);
+        auto status_line = std::make_shared<munin::container>();
+        status_line->set_layout(munin::make_compass_layout());
+        status_line->add_component(status_bar, munin::compass_layout::heading::west);
+        status_line->add_component(status_fill, munin::compass_layout::heading::centre);
+        
         auto ui = std::make_shared<munin::container>();
-        ui->set_layout(std::unique_ptr<munin::layout>(
-            new munin::grid_layout({1, 1})));
-        ui->add_component(camera_);
+        ui->set_layout(munin::make_compass_layout());
+        ui->add_component(camera_, munin::compass_layout::heading::centre);
+        ui->add_component(status_line, munin::compass_layout::heading::south);
         window_ = std::make_shared<munin::window>(ui);
     }
 
