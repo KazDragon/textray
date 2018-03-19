@@ -1,6 +1,7 @@
 #pragma once
 
 #include "core.hpp"
+#include <cmath>
 
 namespace ma {
 
@@ -56,6 +57,22 @@ struct vector2d
         return *this;
     }
 
+    //* ==========================================================================
+    /// \brief Length
+    //* ==========================================================================
+    double length() const
+    {
+        return std::sqrt(x * x + y * y);
+    }
+
+    //* ==========================================================================
+    /// \brief Construct from angle, in radians
+    //* ==========================================================================
+    static vector2d from_angle(double angle)
+    {
+        return {std::cos(angle), std::sin(angle)};
+    }
+
     double x;
     double y;
 };
@@ -90,6 +107,46 @@ constexpr vector2d operator+(vector2d lhs, vector2d const &rhs)
 constexpr vector2d operator-(vector2d lhs, vector2d const &rhs)
 {
     return lhs -= rhs;
+}
+
+// ==========================================================================
+// OPERATOR*(double,vector2d)
+// ==========================================================================
+constexpr vector2d operator*(double lhs, vector2d const &rhs)
+{
+    return {lhs * rhs.x, lhs * rhs.y};
+}
+
+// ==========================================================================
+// OPERATOR*(vector2d,double)
+// ==========================================================================
+constexpr vector2d operator*(vector2d const &lhs, double rhs)
+{
+    return {lhs.x * rhs, lhs.y * rhs};
+}
+
+// ==========================================================================
+// OPERATOR/(vector2d, double)
+// ==========================================================================
+constexpr vector2d operator/(vector2d const &lhs, double rhs)
+{
+    return {lhs.x / rhs, lhs.y / rhs};
+}
+
+// ==========================================================================
+// dot(vector2d,vector2d)
+// ==========================================================================
+constexpr double dot(vector2d const& lhs, vector2d const &rhs)
+{
+    return lhs.x * rhs.x + lhs.y * rhs.y;
+}
+
+// ==========================================================================
+// normalize(vector2d)
+// ==========================================================================
+constexpr vector2d normalize(vector2d const& v)
+{
+    return v / v.length();
 }
 
 }

@@ -29,6 +29,7 @@
 #include "connection.hpp"
 #include "floorplan.hpp"
 #include "lambda_visitor.hpp"
+#include "vector2d.hpp"
 #include <munin/compass_layout.hpp>
 #include <munin/container.hpp>
 #include <munin/filled_box.hpp>
@@ -69,6 +70,11 @@ floorplan level_map = {{
 // ==========================================================================
 class client::impl
 {
+    static double to_radians(double angle_degrees)
+    {
+        return angle_degrees * M_PI / 180;
+    }
+
     static terminalpp::behaviour create_behaviour()
     {
         terminalpp::behaviour behaviour;
@@ -91,8 +97,9 @@ public :
         terminal_(impl::create_behaviour()),
         floorplan_(std::make_shared<floorplan>(level_map)),
         position_({3, 2}),
-        heading_(210 * M_PI/180),
-        camera_(std::make_shared<camera>(floorplan_, position_, heading_))
+        heading_(to_radians(210)),
+        fov_(90),
+        camera_(std::make_shared<camera>(floorplan_, position_, heading_, to_radians(fov_)))
     {
         using namespace terminalpp::literals;
         auto const status_text = std::vector<terminalpp::string> {
@@ -204,11 +211,53 @@ public :
 
 private :
     // ======================================================================
+    // MOVE_DIRECTION
+    // ======================================================================
+    void move_direction(double angle)
+    {
+        constexpr auto VELOCITY = 0.25;
+        position_ += vector2d::from_angle(angle) * VELOCITY;
+        camera_->move_to(position_, heading_);
+    }
+
+    // ======================================================================
+    // MOVE_FORWARD
+    // ======================================================================
+    void move_forward()
+    {
+        move_direction(heading_);
+    }
+
+    // ======================================================================
+    // MOVE_BACKWARD
+    // ======================================================================
+    void move_backward()
+    {
+        move_direction(heading_ + M_PI);
+    }
+
+    // ======================================================================
+    // MOVE_LEFT
+    // ======================================================================
+    void move_left()
+    {
+        move_direction(heading_ + M_PI/2);
+    }
+
+    // ======================================================================
+    // MOVE_RIGHT
+    // ======================================================================
+    void move_right()
+    {
+        move_direction(heading_ - M_PI/2);
+    }
+
+    // ======================================================================
     // ROTATE_LEFT
     // ======================================================================
     void rotate_left()
     {
-        heading_ += (15 * M_PI/180);
+        heading_ += to_radians(15);
         camera_->move_to(position_, heading_);
     }
     
@@ -217,24 +266,85 @@ private :
     // ======================================================================
     void rotate_right()
     {
-        heading_ -= (15 * M_PI/180);
+        heading_ -= to_radians(15);
         camera_->move_to(position_, heading_);
     }
 
+    // ======================================================================
+    // ZOOM_IN
+    // ======================================================================
+    void zoom_in()
+    {
+        fov_ = std::max(5.0, fov_ - 5.0);
+        camera_->set_fov(to_radians(fov_));
+    }
+
+    // ======================================================================
+    // ZOOM_OUT
+    // ======================================================================
+    void zoom_out()
+    {
+        fov_ = std::min(175.0, fov_ + 5.0);
+        camera_->set_fov(to_radians(fov_));
+    }
+
+    // ======================================================================
+    // ZOOM_OUT
+    // ======================================================================
+    void reset_zoom()
+    {
+        fov_ = 90;
+        camera_->set_fov(to_radians(fov_));
+    }
 
     // ======================================================================
     // KEYPRESS_EVENT
     // ======================================================================
     bool keypress_event(terminalpp::virtual_key const &vk)
     {
-        if (vk.key == terminalpp::vk::lowercase_a)
+        if (vk.key == terminalpp::vk::lowercase_q)
         {
             rotate_left();
             return true;
         }
-        else if (vk.key == terminalpp::vk::lowercase_d)
+        else if (vk.key == terminalpp::vk::lowercase_e)
         {
             rotate_right();
+            return true;
+        }
+        else if (vk.key == terminalpp::vk::lowercase_w)
+        {
+            move_forward();
+            return true;
+        }
+        else if (vk.key == terminalpp::vk::lowercase_s)
+        {
+            move_backward();
+            return true;
+        }
+        else if (vk.key == terminalpp::vk::lowercase_a)
+        {
+            move_left();
+            return true;
+        }
+        else if (vk.key == terminalpp::vk::lowercase_d)
+        {
+            move_right();
+            return true;
+        }
+        else if (vk.key == terminalpp::vk::lowercase_z)
+        {
+            zoom_in();
+            return true;
+        }
+        else if (vk.key == terminalpp::vk::lowercase_x)
+        {
+            zoom_out();
+            return true;
+        }
+        else if (vk.key == terminalpp::vk::lowercase_c)
+        {
+            reset_zoom();
             return true;
         }
         
@@ -286,8 +396,9 @@ private :
     terminalpp::ansi_terminal               terminal_;
     
     std::shared_ptr<floorplan>              floorplan_;
-    point                                   position_;
+    vector2d                                position_;
     double                                  heading_;
+    double                                  fov_;
 
     std::shared_ptr<camera>                 camera_;
 };

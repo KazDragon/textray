@@ -1,5 +1,6 @@
 #include "camera.hpp"
 #include <math.h>
+#include <vector2d.hpp>
 
 static std::vector<terminalpp::string> render_background(terminalpp::extent size)
 {
@@ -54,82 +55,99 @@ static void render_floor(std::vector<terminalpp::string> &content)
 static void render_walls(
     std::vector<terminalpp::string> &content,
     ma::floorplan const& plan,
-    ma::point position,
-    double heading)
+    ma::vector2d const& position,
+    double heading,
+    double fov)
 {
+    static const double TEXTEL_ASPECT = 2.0;  // textel_height / textel_width
+    static const double WALL_HEIGHT   = 1.0;  // height of walls, in world units
+
+    // FoV has to be between 0 and 180 degrees (exclusive).
+    assert(fov > 0.0001);
+    assert(fov < M_PI - 0.0001);
+    
     const auto view_height = int(content.size());
+    if (view_height == 0)
+    {
+        return;
+    }
+    
     const auto view_width  = int(content[0].size());
+    if (view_width == 0)
+    {
+        return;
+    }
     
     // identify components of a unit vector in the direction of the camera
     // heading and a plane perpendicular to it on which the textels(!) are
     // rendered.
-    double dirx = cos(heading);
-    double diry = sin(heading);
-    double planex = cos(heading - M_PI/2);
-    double planey = sin(heading - M_PI/2);
+    const ma::vector2d dir   = ma::vector2d::from_angle(heading);
+    const ma::vector2d right = ma::vector2d::from_angle(heading - M_PI/2);
     
+    // Calculate the linear scale of the vertical FoV based on the viewport's aspect ratio
+    // (taking the textel aspect ratio into consideration as well).
+    const double tanHalfFov = tan(fov / 2);
+    const double fovScaleY = tanHalfFov / view_width * view_height * TEXTEL_ASPECT;
+
     for (terminalpp::coordinate_type x = 0; x < view_width; ++x)
     {
-        //calculate ray position and direction
-        double camerax = 2 * x / double(view_width) - 1; //x-coordinate in camera space
-
-        double rayDirX = dirx / 2 + planex * camerax;
-        double rayDirY = diry / 2 + planey * camerax;
-
+        // calculate (normalized) ray direction
+        double camerax = 2 * (x + 0.5) / view_width - 1; // x-coordinate in camera space (range [-1,+1])
+        ma::vector2d ray = normalize(dir / tanHalfFov + right * camerax);
+        
         auto mapX = int(position.x);
         auto mapY = int(position.y);
-        double posX = position.x;
-        double posY = position.y;
         
         //length of ray from current position to next x or y-side
         double sideDistX;
         double sideDistY;
   
         //length of ray from one x or y-side to next x or y-side
-        double deltaDistX = std::abs(1 / rayDirX);
-        double deltaDistY = std::abs(1 / rayDirY);
+        double deltaDistX = std::abs(1 / ray.x);
+        double deltaDistY = std::abs(1 / ray.y);
   
         //what direction to step in x or y-direction (either +1 or -1)
         int stepX;
         int stepY;
-  
-        int hit = 0; //was there a wall hit?
-        int side; //was a NS or a EW wall hit?
         
         //calculate step and initial sideDist
-        if (rayDirX < 0)
+        if (ray.x < 0)
         {
             stepX = -1;
-            sideDistX = (posX - mapX) * deltaDistX;
+            sideDistX = (position.x - mapX) * deltaDistX;
         }
         else
         {
             stepX = 1;
-            sideDistX = (mapX + 1.0 - posX) * deltaDistX;
+            sideDistX = (mapX + 1.0 - position.x) * deltaDistX;
         }
-        if (rayDirY < 0)
+        if (ray.y < 0)
         {
             stepY = -1;
-            sideDistY = (posY - mapY) * deltaDistY;
+            sideDistY = (position.y - mapY) * deltaDistY;
         }
         else
         {
             stepY = 1;
-            sideDistY = (mapY + 1.0 - posY) * deltaDistY;
+            sideDistY = (mapY + 1.0 - position.y) * deltaDistY;
         }
         
         //perform DDA (Digital Differential Analysis)
-        while (hit == 0)
+        double wallDist;
+        int side;
+        do
         {
             //jump to next map square, OR in x-direction, OR in y-direction
             if (sideDistX < sideDistY)
             {
+                wallDist = sideDistX;
                 sideDistX += deltaDistX;
                 mapX += stepX;
                 side = 0;
             }
             else
             {
+                wallDist = sideDistY;
                 sideDistY += deltaDistY;
                 mapY += stepY;
                 side = 1;
@@ -137,35 +155,33 @@ static void render_walls(
         
             //Check if ray has hit a wall
             // TODO: fix when fill is more than a character code.
-            if (plan[mapY][mapX].fill.glyph_.character_ > 0) 
-                hit = 1;
-        } 
+        } while (plan[mapY][mapX].fill.glyph_.character_ == 0);
 
-        //Calculate distance projected on camera direction (Euclidean distance will give fisheye effect!)
-        double perpWallDist;
-        if (side == 0) perpWallDist = (mapX - posX + (1 - stepX) / 2) / rayDirX;
-        else           perpWallDist = (mapY - posY + (1 - stepY) / 2) / rayDirY;
-
-        //Calculate height of line to draw on screen
-        int lineHeight = (int)(view_height / perpWallDist);
-  
-        //calculate lowest and highest pixel to fill in current stripe
-        int drawStart = -lineHeight / 2 + view_height / 2;
-        if(drawStart < 0)drawStart = 0;
-        int drawEnd = lineHeight / 2 + view_height / 2;
-        if(drawEnd >= view_height)drawEnd = view_height - 1;
-        
-        for (terminalpp::coordinate_type row = drawStart; row < drawEnd; ++row)
+        // Calculate distance projected on camera direction (direct distance along ray will give fisheye effect!)
+        const auto perpWallDist = dot(wallDist * ray, dir);
+        if (perpWallDist > 0.001)
         {
-            terminalpp::element brush('o');
-            brush.attribute_.foreground_colour_ = terminalpp::ansi::graphics::colour(
-              plan[mapY][mapX].fill.glyph_.character_);
-            if (side == 0)
+            // Calculate height of line to draw on screen.
+            // Correct for the textel aspect ratio to make sure the height is correct on the screen.
+            auto lineHeight = view_height * WALL_HEIGHT / perpWallDist / fovScaleY / TEXTEL_ASPECT;
+  
+            // Calculate lowest and highest textel to fill in current stripe
+            int drawStart = std::max( (int)round(view_height / 2.0 - lineHeight / 2), 0);
+            int drawEnd   = std::min( (int)round(view_height / 2.0 + lineHeight / 2), view_height - 1);
+        
+            for (terminalpp::coordinate_type row = drawStart; row < drawEnd; ++row)
             {
-                brush.attribute_.polarity_ = terminalpp::ansi::graphics::polarity::negative;
+                terminalpp::element brush('o');
+                brush.attribute_.foreground_colour_ = terminalpp::ansi::graphics::colour(
+                  plan[mapY][mapX].fill.glyph_.character_);
+
+                if (side == 0)
+                {
+                    brush.attribute_.polarity_ = terminalpp::ansi::graphics::polarity::negative;
+                }
+
+                content[row][x] = brush;
             }
-              
-            content[row][x] = brush;
         }
     }
 }
@@ -174,13 +190,14 @@ static void render_camera_image(
     terminalpp::extent size,
     munin::image& img,
     ma::floorplan const& plan,
-    ma::point position,
-    double heading)
+    ma::vector2d const& position,
+    double heading,
+    double fov)
 {
     auto content = render_background(size);
     render_ceiling(content); 
     render_floor(content);
-    render_walls(content, plan, position, heading);
+    render_walls(content, plan, position, heading, fov);
     
     
     img.set_content(content);    
@@ -188,11 +205,12 @@ static void render_camera_image(
 
 namespace ma {
 
-camera::camera(std::shared_ptr<floorplan> plan, point position, double heading)
+camera::camera(std::shared_ptr<floorplan> plan, vector2d position, double heading, double fov)
   : image_(std::make_shared<munin::image>()),
     floorplan_(std::move(plan)),
     position_(std::move(position)),
-    heading_(std::move(heading))
+    heading_(std::move(heading)),
+    fov_(std::move(fov))
 {
 }
 
@@ -201,10 +219,20 @@ terminalpp::extent camera::do_get_preferred_size() const
     return image_->get_preferred_size();
 }
 
-void camera::move_to(point position, double heading)
+void camera::move_to(vector2d position, double heading)
 {
-    position_ = position;
-    heading_ = heading;
+    position_ = std::move(position);
+    heading_ = std::move(heading);
+    on_redraw({
+        munin::rectangle({}, get_size())
+    });
+}
+
+void camera::set_fov(double fov)
+{
+    assert(fov > 0.0001);
+    assert(fov < M_PI - 0.0001);
+    fov_ = std::move(fov);
     on_redraw({
         munin::rectangle({}, get_size())
     });
@@ -221,7 +249,7 @@ void camera::do_draw(
 {
     if (get_size() != terminalpp::extent(0, 0))
     {
-        render_camera_image(get_size(), *image_, *floorplan_, position_, heading_);
+        render_camera_image(get_size(), *image_, *floorplan_, position_, heading_, fov_);
         image_->draw(cv, region);    
     }
 }
