@@ -27,13 +27,10 @@
 #pragma once
 
 #include "core.hpp"
+#include <boost/asio/io_service.hpp>
 #include <functional>
 #include <memory>
 #include <vector>
-
-namespace boost { namespace asio {
-    class io_service;
-}}
 
 namespace munin {
     class component;
