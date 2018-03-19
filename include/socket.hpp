@@ -2,6 +2,7 @@
 
 #include "core.hpp"
 #include "datastream.hpp"
+#include <boost/asio/io_service.hpp>
 #include <boost/asio/ip/tcp.hpp>
 #include <functional>
 #include <memory>
