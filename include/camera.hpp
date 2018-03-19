@@ -1,7 +1,6 @@
 #pragma once
 
 #include "floorplan.hpp"
-#include "point.hpp"
 #include "vector2d.hpp"
 #include <munin/basic_component.hpp>
 #include <munin/image.hpp>
@@ -14,13 +13,21 @@ class camera : public munin::basic_component
 public :
     //* =====================================================================
     /// \brief Constructor
+    /// \param position position of the camera on the floorplan.
+    /// \param heading view direction of the camera, in radians.
+    /// \param fov horizontal field of view of the camera, in radians.
     //* =====================================================================
-    camera(std::shared_ptr<floorplan> plan, point position, double heading);
+    camera(std::shared_ptr<floorplan> plan, vector2d position, double heading, double fov);
 
     //* =====================================================================
     /// \brief Move to the specified position and heading.
     //* =====================================================================
-    void move_to(point position, double heading);
+    void move_to(vector2d position, double heading);
+
+    //* =====================================================================
+    /// \brief Set horizontal field of view, in radians
+    //* =====================================================================
+    void set_fov(double fov);
 
 private :
     //* =====================================================================
@@ -46,8 +53,9 @@ private :
     
     std::shared_ptr<munin::image> image_;
     std::shared_ptr<floorplan> floorplan_;
-    point position_;
+    vector2d position_;
     double heading_;
+    double fov_;
 };
 
 }
