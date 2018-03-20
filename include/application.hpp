@@ -6,7 +6,7 @@
 namespace ma {
     
 //* =========================================================================
-/// \brief A class that implements the main engine for the Paradice9 server.
+/// \brief A class that implements the main engine for the server.
 /// \param io_service - The engine will be run within using the dispatch
 ///        mechanisms of this object.
 /// \brief work - A "work" object.  While this is not reset, the threads'

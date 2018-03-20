@@ -5,6 +5,6 @@
 
 namespace ma {
 
-using floorplan = std::array<std::array<tile, 5>, 5>;
+using floorplan = std::array<std::array<tile, 8>, 9>;
 
 }

@@ -1,29 +1,3 @@
-// ==========================================================================
-// Paradice Client
-//
-// Copyright (C) 2009 Matthew Chaplain, All Rights Reserved.
-//
-// Permission to reproduce, distribute, perform, display, and to prepare
-// derivitive works from this file under the following conditions:
-//
-// 1. Any copy, reproduction or derivitive work of any part of this file
-//    contains this copyright notice and licence in its entirety.
-//
-// 2. The rights granted to you under this license automatically terminate
-//    should you attempt to assert any patent claims against the licensor
-//    or contributors, which in any way restrict the ability of any party
-//    from using this software or portions thereof in any form under the
-//    terms of this license.
-//
-// Disclaimer: THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY
-//             KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE
-//             WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR
-//             PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS
-//             OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR
-//             OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR
-//             OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE
-//             SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
-// ==========================================================================
 #include "client.hpp"
 #include "camera.hpp"
 #include "connection.hpp"
@@ -42,28 +16,24 @@
 #include <algorithm>
 #include <string>
 #include <math.h>
+
 namespace ma {
 
 namespace {
 
 floorplan level_map = {{
- { 1, 1, 2, 5, 3 },
- { 3, 0, 0, 0, 4 },
- { 4, 2, 0, 0, 5 },
- { 5, 0, 0, 0, 6 },
- { 7, 4, 2, 5, 9 }
-
+ { 1, 1, 2, 2, 3, 3, 4, 4 },
+ { 3, 0, 0, 0, 0, 0, 0, 4 },
+ { 3, 0, 0, 0, 5, 0, 0, 4 },
+ { 4, 2, 0, 0, 0, 0, 0, 5 },
+ { 4, 2, 0, 0, 0, 0, 0, 5 },
+ { 5, 0, 0, 0, 0, 0, 0, 6 },
+ { 5, 0, 0, 1, 0, 0, 0, 6 },
+ { 7, 0, 0, 0, 0, 0, 0, 7 },
+ { 7, 4, 4, 2, 2, 5, 5, 9 }
 }};
 
 }
-
-/*
- { 7, 7, 2, 5, 9 }
- { 5, 0, 0, 0, 6 },
- { 4, 2, 0, 0, 5 },
- { 3, 0, 0, 0, 4 },
- { 1, 1, 2, 5, 3 },
-*/
 
 // ==========================================================================
 // CLIENT IMPLEMENTATION STRUCTURE
@@ -103,10 +73,10 @@ public :
     {
         using namespace terminalpp::literals;
         auto const status_text = std::vector<terminalpp::string> {
-            "\\[0\\]4AMMO: 16"_ets,
-            "\\[0\\]4LEVEL: 4"_ets
+            "\\<340\\>002Movement: asdw.  Rotation: qe"_ets,
+            "\\<340\\>002Zoom: zx. Reset zoom: c"_ets
         };
-        auto const fill = "\\[0\\]4 "_ets[0];
+        auto const fill = "\\>002 "_ets[0];
 
         auto status_bar  = std::make_shared<munin::image>(status_text, fill);
         auto status_fill = std::make_shared<munin::filled_box>(fill);
@@ -170,13 +140,7 @@ public :
     void set_window_title(std::string const &title)
     {
         /*
-        {
-            std::unique_lock<std::mutex> lock(dispatch_queue_mutex_);
-            dispatch_queue_.push_back(bind(
-                &munin::window::set_title, window_, title));
-        }
-
-        strand_.post(bind(&impl::dispatch_queue, shared_from_this()));
+        window_->set_title(title);
         */
     }
 
@@ -302,53 +266,39 @@ private :
     // ======================================================================
     bool keypress_event(terminalpp::virtual_key const &vk)
     {
-        if (vk.key == terminalpp::vk::lowercase_q)
+        static struct {
+            terminalpp::vk key;
+            void (impl::*handle)();
+        } const handlers[] =
         {
-            rotate_left();
-            return true;
-        }
-        else if (vk.key == terminalpp::vk::lowercase_e)
-        {
-            rotate_right();
-            return true;
-        }
-        else if (vk.key == terminalpp::vk::lowercase_w)
-        {
-            move_forward();
-            return true;
-        }
-        else if (vk.key == terminalpp::vk::lowercase_s)
-        {
-            move_backward();
-            return true;
-        }
-        else if (vk.key == terminalpp::vk::lowercase_a)
-        {
-            move_left();
-            return true;
-        }
-        else if (vk.key == terminalpp::vk::lowercase_d)
-        {
-            move_right();
-            return true;
-        }
-        else if (vk.key == terminalpp::vk::lowercase_z)
-        {
-            zoom_in();
-            return true;
-        }
-        else if (vk.key == terminalpp::vk::lowercase_x)
-        {
-            zoom_out();
-            return true;
-        }
-        else if (vk.key == terminalpp::vk::lowercase_c)
-        {
-            reset_zoom();
-            return true;
-        }
+            { terminalpp::vk::lowercase_q, &impl::rotate_left   },
+            { terminalpp::vk::lowercase_e, &impl::rotate_right  },
+            { terminalpp::vk::lowercase_w, &impl::move_forward  },
+            { terminalpp::vk::lowercase_s, &impl::move_backward },
+            { terminalpp::vk::lowercase_a, &impl::move_left     },
+            { terminalpp::vk::lowercase_d, &impl::move_right    },
+            { terminalpp::vk::lowercase_z, &impl::zoom_in       },
+            { terminalpp::vk::lowercase_x, &impl::zoom_out      },
+            { terminalpp::vk::lowercase_c, &impl::reset_zoom    },
+        };
         
-        return false;
+        auto handler = std::find_if(
+            std::begin(handlers),
+            std::end(handlers),
+            [&vk](auto const &handler)
+            {
+                return vk.key == handler.key;
+            });
+            
+        if (handler != std::end(handlers))
+        {
+            (this->*handler->handle)();
+            return true;
+        }
+        else
+        {
+            return false;
+        }
     }
     
     // ======================================================================
