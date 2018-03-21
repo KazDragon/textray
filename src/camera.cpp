@@ -2,53 +2,32 @@
 #include <math.h>
 #include <vector2d.hpp>
 
-static std::vector<terminalpp::string> render_background(terminalpp::extent size)
+static void render_ceiling(
+    std::vector<terminalpp::string> &content,
+    terminalpp::extent size)
 {
-    terminalpp::string empty_raster_line;
-    for (int column = 0; column < size.width; ++column)
-    {
-        empty_raster_line += ' ';
-    }
+    using namespace terminalpp::literals;
+    static auto const ceiling_brush = "\\[7="_ets[0];
     
-    return std::vector<terminalpp::string>(size.height, empty_raster_line);
-}
+    auto const max_ceiling_row = size.height / 2;
 
-static void render_ceiling(std::vector<terminalpp::string> &content)
-{
-    static terminalpp::element const ceiling_brush = []()
-    {
-        terminalpp::element elem('=');
-        elem.attribute_.foreground_colour_ = terminalpp::ansi::graphics::colour::white;
-        elem.attribute_.intensity_ = terminalpp::ansi::graphics::intensity::bold;
-        return elem;
-    }();
-    
-    auto const max_ceiling_row = content.size() / 2;
     for (int row = 0; row < max_ceiling_row; ++row)
     {
-        for (int column = 0; column < content[row].size(); ++column)
-        {
-            content[row][column] = ceiling_brush;
-        }
+        content.emplace_back(size.width, ceiling_brush);
     }
 }
 
-static void render_floor(std::vector<terminalpp::string> &content)
+static void render_floor(
+    std::vector<terminalpp::string> &content,
+    terminalpp::extent size)
 {
-    static terminalpp::element const floor_brush = []()
-    {
-        terminalpp::element elem('_');
-        elem.attribute_.foreground_colour_ = terminalpp::ansi::graphics::colour::yellow;
-        return elem;
-    }();
+    using namespace terminalpp::literals;
+    static auto const floor_brush = "\\[3_"_ets[0];
     
-    auto const min_floor_row = content.size() / 2;
-    for (int row = min_floor_row; row < content.size(); ++row)
+    auto const min_floor_row = size.height / 2;
+    for (int row = min_floor_row; row < size.height; ++row)
     {
-        for (int column = 0; column < content[row].size(); ++column)
-        {
-            content[row][column] = floor_brush;
-        }
+        content.emplace_back(size.width, floor_brush);
     }
 }
 
@@ -194,11 +173,10 @@ static void render_camera_image(
     double heading,
     double fov)
 {
-    auto content = render_background(size);
-    render_ceiling(content); 
-    render_floor(content);
+    std::vector<terminalpp::string> content;
+    render_ceiling(content, size);
+    render_floor(content, size);
     render_walls(content, plan, position, heading, fov);
-    
     
     img.set_content(content);    
 }
