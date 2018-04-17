@@ -31,6 +31,7 @@ add_executable(munin_acceptance
     src/main.cpp
     src/server.cpp
     src/socket.cpp
+    src/ui.cpp
 )
 
 target_include_directories(munin_acceptance

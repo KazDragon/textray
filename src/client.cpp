@@ -4,10 +4,7 @@
 #include "floorplan.hpp"
 #include "lambda_visitor.hpp"
 #include "vector2d.hpp"
-#include <munin/compass_layout.hpp>
-#include <munin/container.hpp>
-#include <munin/filled_box.hpp>
-#include <munin/grid_layout.hpp>
+#include "ui.hpp"
 #include <munin/window.hpp>
 #include <terminalpp/ansi_terminal.hpp>
 #include <terminalpp/canvas.hpp>
@@ -69,27 +66,9 @@ public :
         position_({3, 2}),
         heading_(to_radians(210)),
         fov_(90),
-        camera_(std::make_shared<camera>(floorplan_, position_, heading_, to_radians(fov_)))
+        ui_(std::make_shared<ui>(floorplan_, position_, heading_, to_radians(fov_)))
     {
-        using namespace terminalpp::literals;
-        auto const status_text = std::vector<terminalpp::string> {
-            "\\<340\\>002Movement: asdw.  Rotation: qe"_ets,
-            "\\<340\\>002Zoom: zx. Reset zoom: c"_ets
-        };
-        auto const fill = "\\>002 "_ets[0];
-
-        auto status_bar  = std::make_shared<munin::image>(status_text, fill);
-        auto status_fill = std::make_shared<munin::filled_box>(fill);
-        auto status_line = std::make_shared<munin::container>();
-        status_line->set_layout(munin::make_compass_layout());
-        status_line->add_component(status_bar, munin::compass_layout::heading::west);
-        status_line->add_component(status_fill, munin::compass_layout::heading::centre);
-        
-        auto ui = std::make_shared<munin::container>();
-        ui->set_layout(munin::make_compass_layout());
-        ui->add_component(camera_, munin::compass_layout::heading::centre);
-        ui->add_component(status_line, munin::compass_layout::heading::south);
-        window_ = std::make_shared<munin::window>(ui);
+        window_ = std::make_shared<munin::window>(ui_);
     }
 
     // ======================================================================
@@ -181,7 +160,7 @@ private :
     {
         constexpr auto VELOCITY = 0.25;
         position_ += vector2d::from_angle(angle) * VELOCITY;
-        camera_->move_to(position_, heading_);
+        ui_->move_camera_to(position_, heading_);
     }
 
     // ======================================================================
@@ -222,7 +201,7 @@ private :
     void rotate_left()
     {
         heading_ += to_radians(15);
-        camera_->move_to(position_, heading_);
+        ui_->move_camera_to(position_, heading_);
     }
     
     // ======================================================================
@@ -231,7 +210,7 @@ private :
     void rotate_right()
     {
         heading_ -= to_radians(15);
-        camera_->move_to(position_, heading_);
+        ui_->move_camera_to(position_, heading_);
     }
 
     // ======================================================================
@@ -240,7 +219,7 @@ private :
     void zoom_in()
     {
         fov_ = std::max(5.0, fov_ - 5.0);
-        camera_->set_fov(to_radians(fov_));
+        ui_->set_camera_fov(to_radians(fov_));
     }
 
     // ======================================================================
@@ -249,7 +228,7 @@ private :
     void zoom_out()
     {
         fov_ = std::min(175.0, fov_ + 5.0);
-        camera_->set_fov(to_radians(fov_));
+        ui_->set_camera_fov(to_radians(fov_));
     }
 
     // ======================================================================
@@ -258,7 +237,7 @@ private :
     void reset_zoom()
     {
         fov_ = 90;
-        camera_->set_fov(to_radians(fov_));
+        ui_->set_camera_fov(to_radians(fov_));
     }
 
     // ======================================================================
@@ -350,7 +329,7 @@ private :
     double                                  heading_;
     double                                  fov_;
 
-    std::shared_ptr<camera>                 camera_;
+    std::shared_ptr<ui>                     ui_;
 };
 
 // ==========================================================================
