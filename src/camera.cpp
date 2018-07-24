@@ -223,12 +223,13 @@ void camera::do_set_size(terminalpp::extent const &size)
 }
 
 void camera::do_draw(
-    terminalpp::canvas_view &cv, munin::rectangle const &region) const
+    munin::render_surface &surface, 
+    munin::rectangle const &region) const
 {
     if (get_size() != terminalpp::extent(0, 0))
     {
         render_camera_image(get_size(), *image_, *floorplan_, position_, heading_, fov_);
-        image_->draw(cv, region);    
+        image_->draw(surface, region);    
     }
 }
 
