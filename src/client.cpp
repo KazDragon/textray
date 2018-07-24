@@ -8,7 +8,6 @@
 #include <munin/window.hpp>
 #include <terminalpp/ansi_terminal.hpp>
 #include <terminalpp/canvas.hpp>
-#include <terminalpp/canvas_view.hpp>
 #include <boost/format.hpp>
 #include <algorithm>
 #include <string>
