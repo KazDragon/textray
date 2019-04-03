@@ -6,22 +6,12 @@ if (POLICY CMP0063)
     cmake_policy(SET CMP0063 NEW)
 endif()
 
-set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${CMAKE_SOURCE_DIR}/cmake/Modules/")
+# Include the Conan recipe in order to get our dependencies
+include(${CMAKE_BINARY_DIR}/conanbuildinfo.cmake)
+conan_basic_setup(TARGETS NO_OUTPUT_DIRS)
 
-find_package(Telnetpp REQUIRED)
-find_package(Terminalpp REQUIRED)
-find_package(nlohmann_json REQUIRED)
-find_package(Munin REQUIRED)
+set(CMAKE_CXX_STANDARD 14)
 
-include(FindBoost)
-find_package(Boost
-    REQUIRED
-    COMPONENTS
-        program_options
-)
-
-find_package(Threads)
-        
 add_executable(munin_acceptance
     src/application.cpp
     src/camera.cpp
@@ -40,10 +30,9 @@ target_include_directories(munin_acceptance
 )
     
 target_link_libraries(munin_acceptance
-    telnetpp
-    terminalpp
-    munin
-    Boost::program_options
-    Threads::Threads
+    CONAN_PKG::telnetpp
+    CONAN_PKG::terminalpp
+    CONAN_PKG::munin
+    CONAN_PKG::boost_program_options
 )
     
