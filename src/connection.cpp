@@ -1,12 +1,10 @@
 #include "connection.hpp"
 #include "socket.hpp"
 #include <telnetpp/telnetpp.hpp>
-#include <telnetpp/byte_converter.hpp>
 #include <telnetpp/options/echo/server.hpp>
 #include <telnetpp/options/mccp/codec.hpp>
 #include <telnetpp/options/mccp/server.hpp>
 #include <telnetpp/options/mccp/zlib/compressor.hpp>
-#include <telnetpp/options/mccp/zlib/decompressor.hpp>
 #include <telnetpp/options/naws/client.hpp>
 #include <telnetpp/options/suppress_ga/server.hpp>
 #include <telnetpp/options/terminal_type/client.hpp>
@@ -28,53 +26,43 @@ struct connection::impl
     // CONSTRUCTOR
     // ======================================================================
     impl(std::shared_ptr<ma::socket> const &socket)
-      : socket_(socket),
-        telnet_session_(
-            [this](auto &&text) -> std::vector<telnetpp::token>
-            {
-                this->on_text(text);
-                return {};
-            }),
-        telnet_mccp_codec_(
-            std::make_shared<telnetpp::options::mccp::zlib::compressor>(),
-            std::make_shared<telnetpp::options::mccp::zlib::decompressor>())
+      : socket_(socket)
     {
-        telnet_echo_server_.set_activatable();
-        telnet_session_.install(telnet_echo_server_);
-        
-        telnet_suppress_ga_server_.set_activatable();
-        telnet_session_.install(telnet_suppress_ga_server_);
-         
-        telnet_naws_client_.set_activatable();
         telnet_naws_client_.on_window_size_changed.connect(
-            [this](auto &&width, auto &&height) -> std::vector<telnetpp::token>
+            [this](auto &&width, auto &&height, auto &&continuation)
             {
                 this->on_window_size_changed(width, height);
-                return {};
             });
-        telnet_session_.install(telnet_naws_client_);
 
-        telnet_terminal_type_client_.set_activatable();
         telnet_terminal_type_client_.on_terminal_type.connect(
-            [this](auto &&type) -> std::vector<telnetpp::token>
+            [this](auto &&type, auto &&continuation)
             {
-                this->on_terminal_type_detected(type);
-                return {};
+                std::string user_type(type.begin(), type.end());
+                this->on_terminal_type_detected(user_type);
             });
-        telnet_terminal_type_client_.on_state_changed.connect(
-            [this](auto &&state) -> std::vector<telnetpp::token>
-            {
-                if (telnet_terminal_type_client_.is_active())
-                {
-                    return telnet_terminal_type_client_.request_terminal_type();
-                }
-                
-                return {};
-            });
-        telnet_session_.install(telnet_terminal_type_client_);
 
-        telnet_mccp_server_.set_activatable();
-        write(telnet_session_.send(telnet_mccp_server_.begin_compression()));
+        telnet_terminal_type_client_.on_state_changed.connect(
+            [this](auto &&continuation)
+            {
+                if (telnet_terminal_type_client_.active())
+                {
+                    telnet_terminal_type_client_.request_terminal_type(continuation);
+                }
+            });
+
+        telnet_mccp_server_.on_state_changed.connect(
+            [this](auto &&continuation)
+            {
+                if (telnet_mccp_server_.active())
+                {
+                    telnet_mccp_server_.start_compression(continuation);
+                }
+            });
+
+        telnet_session_.install(telnet_echo_server_);
+        telnet_session_.install(telnet_suppress_ga_server_);
+        telnet_session_.install(telnet_naws_client_);
+        telnet_session_.install(telnet_terminal_type_client_);
         telnet_session_.install(telnet_mccp_server_);
         
         // Begin the keepalive process.  This sends regular heartbeats to the
@@ -84,13 +72,19 @@ struct connection::impl
             std::make_shared<boost::asio::deadline_timer>(
                 std::ref(socket_->get_io_service()));
         schedule_keepalive();
-        
+
         // Send the required activations.
-        write(telnet_session_.send(telnet_echo_server_.activate()));
-        write(telnet_session_.send(telnet_suppress_ga_server_.activate()));
-        write(telnet_session_.send(telnet_naws_client_.activate()));
-        write(telnet_session_.send(telnet_terminal_type_client_.activate()));
-        write(telnet_session_.send(telnet_mccp_server_.activate()));
+        auto const &write_continuation = 
+            [this](telnetpp::element const &elem)
+            {
+                this->write(elem);
+            };
+
+        telnet_echo_server_.activate(write_continuation);
+        telnet_suppress_ga_server_.activate(write_continuation);
+        telnet_naws_client_.activate(write_continuation);
+        telnet_terminal_type_client_.activate(write_continuation);
+        telnet_mccp_server_.activate(write_continuation);
     }
 
     // ======================================================================
@@ -100,20 +94,34 @@ struct connection::impl
     {
         schedule_next_read();
     }
+
+    // ======================================================================
+    // RAW_WRITE
+    // ======================================================================
+    void raw_write(telnetpp::bytes data)
+    {
+        telnet_mccp_compressor_(
+            data,
+            [this](telnetpp::bytes compressed_data, bool)
+            {
+                // TODO: socket/datastream needs fixing to take spans.
+                std::vector<telnetpp::byte> packaged_data(
+                    compressed_data.begin(), compressed_data.end());
+                this->socket_->write(packaged_data);
+            });
+    }
     
     // ======================================================================
     // WRITE
     // ======================================================================
-    void write(std::vector<telnetpp::stream_token> const &data)
+    void write(telnetpp::element const &data)
     {
-        auto const &compressed_data = telnet_mccp_codec_.send(data);
-        auto const &stream = telnet_byte_converter_.send(compressed_data);
-        
-        if (stream.size() != 0)
-        {
-            socket_->write({stream.begin(), stream.end()});
-        }
-        
+        telnet_session_.send(
+            data, 
+            [this](telnetpp::bytes data)
+            {
+                this->raw_write(data);
+            });
     }
 
     // ======================================================================
@@ -142,10 +150,19 @@ struct connection::impl
     // ======================================================================
     // ON_DATA
     // ======================================================================
-    void on_data(std::vector<byte> const &data)
+    void on_data(telnetpp::bytes data)
     {
-        write(telnet_session_.send(
-            telnet_session_.receive({data.begin(), data.end()})));
+        telnet_session_.receive(
+            data, 
+            [this](telnetpp::bytes data, auto &&send)
+            {
+                std::string app_data(data.begin(), data.end());
+                on_data_read_(app_data);
+            },
+            [this](telnetpp::bytes data)
+            {
+                this->raw_write(data);
+            });
             
         schedule_next_read();
     }
@@ -157,9 +174,12 @@ struct connection::impl
     {
         if (!error && socket_->is_alive())
         {
-            write(telnet_session_.send({
-                    telnetpp::element(telnetpp::command(telnetpp::nop))
-                }));
+            telnet_session_.send(
+                telnetpp::nop, 
+                [this](telnetpp::bytes data)
+                {
+                    raw_write(data);
+                });
 
             schedule_keepalive();
         }
@@ -176,17 +196,6 @@ struct connection::impl
             {
                 this->on_keepalive(error_code);
             });
-    }
-
-    // ======================================================================
-    // ON_TEXT
-    // ======================================================================
-    void on_text(std::string const &text)
-    {
-        if (on_data_read_)
-        {
-            on_data_read_(text);
-        }
     }
 
     // ======================================================================
@@ -223,18 +232,15 @@ struct connection::impl
     }
     
     std::shared_ptr<ma::socket>                          socket_;
-    std::vector<byte>                                    unparsed_bytes_;
-    
+
     std::function<void (std::string const &)>            on_data_read_;
     telnetpp::session                                    telnet_session_;
     telnetpp::options::echo::server                      telnet_echo_server_;
     telnetpp::options::suppress_ga::server               telnet_suppress_ga_server_;
-    telnetpp::options::mccp::server                      telnet_mccp_server_;
-    telnetpp::options::mccp::codec                       telnet_mccp_codec_;
+    telnetpp::options::mccp::zlib::compressor            telnet_mccp_compressor_;
+    telnetpp::options::mccp::server                      telnet_mccp_server_{telnet_mccp_compressor_};
     telnetpp::options::naws::client                      telnet_naws_client_;
     telnetpp::options::terminal_type::client             telnet_terminal_type_client_;
-    
-    telnetpp::byte_converter                             telnet_byte_converter_;
     
     std::function<void (std::uint16_t, std::uint16_t)>   on_window_size_changed_;
     std::shared_ptr<boost::asio::deadline_timer>         keepalive_timer_;
@@ -272,9 +278,11 @@ void connection::start()
 // ==========================================================================
 void connection::write(std::string const &data)
 {
-    pimpl_->write(pimpl_->telnet_session_.send({
-        telnetpp::element(data)
-    }));
+    telnetpp::bytes telnet_data(
+        reinterpret_cast<telnetpp::byte const*>(data.data()),
+        data.size());
+
+    pimpl_->write(telnet_data);
 }
 
 // ==========================================================================
@@ -314,11 +322,8 @@ void connection::disconnect()
         pimpl_->keepalive_timer_->cancel(unused_error_code);
     }
 
-    if (pimpl_->socket_ != nullptr)
-    {
-        pimpl_->socket_->close();
-        pimpl_->socket_.reset();
-    }
+    pimpl_->socket_->close();
+    pimpl_->socket_.reset();
 }
 
 // ==========================================================================

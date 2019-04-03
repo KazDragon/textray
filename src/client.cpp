@@ -87,7 +87,7 @@ public :
                         elem,
                         [this](auto const &elem)
                         {
-                            event(elem);
+                            this->event(elem);
                         });
                 };
             });

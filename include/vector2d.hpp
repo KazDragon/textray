@@ -144,7 +144,7 @@ constexpr double dot(vector2d const& lhs, vector2d const &rhs)
 // ==========================================================================
 // normalize(vector2d)
 // ==========================================================================
-constexpr vector2d normalize(vector2d const& v)
+inline vector2d normalize(vector2d const& v)
 {
     return v / v.length();
 }
