@@ -1,18 +1,18 @@
 #pragma once
 
-#include <serverpp/tcp_server.hpp>
+#include <serverpp/core.hpp>
 #include <memory>
 
 namespace ma {
     
 //* =========================================================================
 /// \brief A class that implements the main engine for the server.
-/// \param port - The server will be set up on this port number.
+/// \param port - The server will be set up on this port identifier.
 //* =========================================================================
 class application final
 {
 public :
-    application(serverpp::port_number port);
+    application(serverpp::port_identifier port);
     ~application();
     
     void run();

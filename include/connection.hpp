@@ -1,6 +1,8 @@
 #pragma once
 
 #include "core.hpp"
+#include <serverpp/core.hpp>
+#include <functional>
 #include <memory>
 
 /*
@@ -46,6 +48,21 @@ public :
     /// \brief Move assignment
     //* =====================================================================
     connection &operator=(connection &&other) noexcept;
+
+    //* =====================================================================
+    /// \brief Asynchronously reads from the connection, calling the
+    ///        supplied continuation with the results.
+    ///
+    /// \note If the continuation received 0 bytes, then the connection has
+    ///       died.
+    //* =====================================================================
+    void async_read(
+        std::function<void (serverpp::bytes)> const &continuation);
+
+    //* =====================================================================
+    /// \brief Writes to the connection.
+    //* =====================================================================
+    void write(serverpp::bytes data);
 
 #if 0
     //* =====================================================================

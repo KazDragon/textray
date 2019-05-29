@@ -25,7 +25,7 @@ public :
     // ======================================================================
     // CONSTRUCTOR
     // ======================================================================
-    impl(serverpp::port_number port)
+    impl(serverpp::port_identifier port)
       : server_(port)
     {
     }
@@ -59,8 +59,9 @@ private :
         auto pending_connections_lock =
             std::unique_lock<std::mutex>(pending_connections_mutex_);
 
-        pending_connections_.emplace_back(std::move(new_socket));
-        return pending_connections_.back();
+        pending_connections_.push_back(
+            boost::make_unique<connection>(std::move(new_socket)));
+        return *pending_connections_.back();
     }
 
     // ======================================================================
@@ -220,7 +221,7 @@ private :
     serverpp::tcp_server server_;
 
     std::mutex pending_connections_mutex_;
-    std::vector<ma::connection> pending_connections_;
+    std::vector<std::unique_ptr<ma::connection>> pending_connections_;
 
     /*
     // A vector of clients whose connections are being negotiated.
@@ -234,7 +235,7 @@ private :
 // ==========================================================================
 // CONSTRUCTOR
 // ==========================================================================
-application::application(serverpp::port_number port)
+application::application(serverpp::port_identifier port)
     : pimpl_(boost::make_unique<impl>(port))
 {
 }

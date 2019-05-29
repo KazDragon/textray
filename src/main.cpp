@@ -17,7 +17,7 @@ int main(int argc, char *argv[])
     po::options_description description("Available options");
     description.add_options()
         ( "help,h",                                       "show this help message"                            )
-        ( "port,p",    po::value<uint16_t>(&port),        "port number"                                       )
+        ( "port,p",    po::value<uint16_t>(&port),        "port identifier"                                   )
         ( "threads,t", po::value<std::string>(&threads),  "number of threads of execution (0 for autodetect)" )
         ;
 
@@ -42,7 +42,7 @@ int main(int argc, char *argv[])
         }
         else if (vm.count("port") == 0)
         {
-            throw po::error("Port number must be specified");
+            throw po::error("Port identifier must be specified");
         }
 
         if (vm.count("threads") == 0)
@@ -80,7 +80,7 @@ int main(int argc, char *argv[])
     {
         if (strlen(err.what()) == 0)
         {
-            std::cout << boost::format("USAGE: %s <port number>|<options>\n")
+            std::cout << boost::format("USAGE: %s <port identifier>|<options>\n")
                         % argv[0]
                  << description
                  << std::endl;
@@ -89,7 +89,7 @@ int main(int argc, char *argv[])
         }
         else
         {
-            std::cerr << boost::format("ERROR: %s\n\nUSAGE: %s <port number>|<options>\n")
+            std::cerr << boost::format("ERROR: %s\n\nUSAGE: %s <port identifier>|<options>\n")
                         % err.what()
                         % argv[0]
                  << description
