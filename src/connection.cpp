@@ -1,5 +1,7 @@
-#if 0
 #include "connection.hpp"
+#include <serverpp/tcp_server.hpp>
+#include <boost/make_unique.hpp>
+/*
 #include "socket.hpp"
 #include <telnetpp/telnetpp.hpp>
 #include <telnetpp/options/echo/server.hpp>
@@ -14,21 +16,21 @@
 #include <deque>
 #include <string>
 #include <utility>
-
+*/
 namespace ma {
 
 // ==========================================================================
 // CONNECTION::IMPLEMENTATION STRUCTURE
 // ==========================================================================
 struct connection::impl
-    : public std::enable_shared_from_this<impl>
 {
     // ======================================================================
     // CONSTRUCTOR
     // ======================================================================
-    impl(std::shared_ptr<ma::socket> const &socket)
-      : socket_(socket)
+    impl(serverpp::tcp_socket &&socket)
+      : socket_(std::move(socket))
     {
+        /*
         telnet_naws_client_.on_window_size_changed.connect(
             [this](auto &&width, auto &&height, auto &&continuation)
             {
@@ -86,8 +88,10 @@ struct connection::impl
         telnet_naws_client_.activate(write_continuation);
         telnet_terminal_type_client_.activate(write_continuation);
         telnet_mccp_server_.activate(write_continuation);
+        */
     }
 
+/*
     // ======================================================================
     // START
     // ======================================================================
@@ -231,7 +235,10 @@ struct connection::impl
 
         terminal_type_requests_.clear();
     }
-    
+*/
+    serverpp::tcp_socket socket_;
+
+/*
     std::shared_ptr<ma::socket>                          socket_;
 
     std::function<void (std::string const &)>            on_data_read_;
@@ -248,24 +255,33 @@ struct connection::impl
 
     std::string                                          terminal_type_;
     std::vector<std::function<void (std::string)>>       terminal_type_requests_;
+*/
 };
 
 // ==========================================================================
 // CONSTRUCTOR
 // ==========================================================================
-connection::connection(std::shared_ptr<ma::socket> const &socket)
-    : pimpl_(std::make_shared<impl>(socket))
+connection::connection(serverpp::tcp_socket &&new_socket)
+    : pimpl_(boost::make_unique<impl>(std::move(new_socket)))
 {
 }
+
+// ==========================================================================
+// MOVE CONSTRUCTOR
+// ==========================================================================
+connection::connection(connection &&other) noexcept = default;
 
 // ==========================================================================
 // DESTRUCTOR
 // ==========================================================================
-connection::~connection()
-{
-    disconnect();
-}
+connection::~connection() = default;
 
+// ==========================================================================
+// MOVE ASSIGNMENT
+// ==========================================================================
+connection &connection::operator=(connection &&other) noexcept = default;
+
+/*
 // ==========================================================================
 // START
 // ==========================================================================
@@ -335,6 +351,6 @@ void connection::async_get_terminal_type(
 {
     pimpl_->terminal_type_requests_.push_back(callback);
 }
+*/
 
 }
-#endif

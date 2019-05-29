@@ -1,18 +1,22 @@
-#if 0
 #pragma once
 
 #include "core.hpp"
+#include <memory>
+
+/*
 #include <terminalpp/ansi/control_sequence.hpp>
 #include <terminalpp/ansi/mouse.hpp>
 #include <terminalpp/virtual_key.hpp>
-#include <memory>
 #include <string>
 #include <utility>
 #include <vector>
+*/
+
+namespace serverpp {
+class tcp_socket;
+}
 
 namespace ma {
-
-class socket;
 
 //* =========================================================================
 /// \brief An connection to a socket that abstracts away details about the
@@ -26,13 +30,24 @@ public :
     /// a communications point, and calls the passed function whenever data
     /// is received.
     //* =====================================================================
-    connection(std::shared_ptr<ma::socket> const &socket);
+    explicit connection(serverpp::tcp_socket &&socket);
+
+    //* =====================================================================
+    /// \brief Move constructor
+    //* =====================================================================
+    connection(connection &&other) noexcept;
 
     //* =====================================================================
     /// \brief Destructor.
     //* =====================================================================
     ~connection();
 
+    //* =====================================================================
+    /// \brief Move assignment
+    //* =====================================================================
+    connection &operator=(connection &&other) noexcept;
+
+#if 0
     //* =====================================================================
     /// \brief Starts reading from the other end of the connection.  Until
     /// this is called, no reads will take place.
@@ -73,12 +88,11 @@ public :
     //* =====================================================================
     void async_get_terminal_type(
         std::function<void (std::string const &)> const &callback);
+#endif
 
 private :
     struct impl;
-    std::shared_ptr<impl> pimpl_;
+    std::unique_ptr<impl> pimpl_;
 };
 
 }
-
-#endif

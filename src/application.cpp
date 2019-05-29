@@ -1,13 +1,17 @@
 #include "application.hpp"
 #include "connection.hpp"
+/*
 #include "camera.hpp"
 #include "client.hpp"
 #include "context_impl.hpp"
 #include <munin/aligned_layout.hpp>
 #include <munin/container.hpp>
+*/
 #include <serverpp/tcp_server.hpp>
 #include <boost/make_unique.hpp>
+/*
 #include <map>
+*/
 #include <utility>
 
 namespace ma {
@@ -31,7 +35,11 @@ public :
     // ======================================================================
     void run()
     {
-        
+        server_.accept(
+            [this](serverpp::tcp_socket &&new_socket)
+            {
+                on_accept(std::move(new_socket));
+            });
     }
 
     // ======================================================================
@@ -43,10 +51,27 @@ public :
     }
 
 private :
-/*
+    // ======================================================================
+    // ADD_PENDING_CONNECTION
+    // ======================================================================
+    connection &create_pending_connection(serverpp::tcp_socket &&new_socket)
+    {
+        auto pending_connections_lock =
+            std::unique_lock<std::mutex>(pending_connections_mutex_);
+
+        pending_connections_.emplace_back(std::move(new_socket));
+        return pending_connections_.back();
+    }
+
     // ======================================================================
     // ON_ACCEPT
     // ======================================================================
+    void on_accept(serverpp::tcp_socket &&new_socket)
+    {
+        auto &pending_connection = 
+            create_pending_connection(std::move(new_socket));
+    }
+/*
     void on_accept(std::shared_ptr<ma::socket> const &socket)
     {
         // Create the connection and client structures for the socket.
@@ -193,6 +218,9 @@ private :
     */
 
     serverpp::tcp_server server_;
+
+    std::mutex pending_connections_mutex_;
+    std::vector<ma::connection> pending_connections_;
 
     /*
     // A vector of clients whose connections are being negotiated.
