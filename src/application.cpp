@@ -1,14 +1,12 @@
 #include "application.hpp"
 #include "connection.hpp"
-#include "server.hpp"
-#include "socket.hpp"
 #include "camera.hpp"
 #include "client.hpp"
 #include "context_impl.hpp"
 #include <munin/aligned_layout.hpp>
 #include <munin/container.hpp>
-#include <boost/asio/io_service.hpp>
-#include <boost/asio/placeholders.hpp>
+#include <serverpp/tcp_server.hpp>
+#include <boost/make_unique.hpp>
 #include <map>
 #include <utility>
 
@@ -23,23 +21,29 @@ public :
     // ======================================================================
     // CONSTRUCTOR
     // ======================================================================
-    impl(
-        boost::asio::io_service                        &io_service
-      , std::shared_ptr<boost::asio::io_service::work>  work
-      , unsigned int                                    port)
-        : io_service_(io_service) 
-        , server_(new server(
-              io_service_
-            , port
-            , [this](auto socket){
-                  this->on_accept(socket);
-              }))
-        , context_(std::make_shared<context_impl>(
-              std::ref(io_service), server_, std::ref(work)))
+    impl(serverpp::port_number port)
+      : server_(port)
     {
     }
 
+    // ======================================================================
+    /// RUN
+    // ======================================================================
+    void run()
+    {
+        
+    }
+
+    // ======================================================================
+    // SHUTDOWN
+    // ======================================================================
+    void shutdown()
+    {
+        server_.shutdown();
+    }
+
 private :
+/*
     // ======================================================================
     // ON_ACCEPT
     // ======================================================================
@@ -186,27 +190,48 @@ private :
             pending_sizes_[connection] = std::make_pair(width, height);
         }
     }
-    
-    boost::asio::io_service      &io_service_;
-    std::shared_ptr<ma::server>   server_;
-    std::shared_ptr<ma::context>  context_;
-    
+    */
+
+    serverpp::tcp_server server_;
+
+    /*
     // A vector of clients whose connections are being negotiated.
     std::vector<std::shared_ptr<ma::connection>> pending_connections_;
     std::map<
         std::shared_ptr<ma::connection>, 
         std::pair<std::uint16_t, std::uint16_t>> pending_sizes_; 
+    */
 };
 
 // ==========================================================================
 // CONSTRUCTOR
 // ==========================================================================
-application::application(
-    boost::asio::io_service                        &io_service
-  , std::shared_ptr<boost::asio::io_service::work>  work
-  , unsigned int                        port)
-    : pimpl_(new impl(io_service, work, port))  
+application::application(serverpp::port_number port)
+    : pimpl_(boost::make_unique<impl>(port))
 {
+}
+
+// ==========================================================================
+// DESTRUCTOR
+// ==========================================================================
+application::~application()
+{
+}
+
+// ==========================================================================
+// RUN
+// ==========================================================================
+void application::run()
+{
+    pimpl_->run();
+}
+
+// ==========================================================================
+// SHUTDOWN
+// ==========================================================================
+void application::shutdown()
+{
+    pimpl_->shutdown();
 }
 
 }

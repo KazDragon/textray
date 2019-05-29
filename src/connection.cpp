@@ -1,3 +1,4 @@
+#if 0
 #include "connection.hpp"
 #include "socket.hpp"
 #include <telnetpp/telnetpp.hpp>
@@ -336,3 +337,4 @@ void connection::async_get_terminal_type(
 }
 
 }
+#endif

@@ -1,5 +1,4 @@
 #include "application.hpp"
-#include <boost/asio/io_service.hpp>
 #include <boost/format.hpp>
 #include <boost/program_options.hpp>
 #include <iostream>
@@ -9,21 +8,16 @@
 
 namespace po = boost::program_options;
 
-static void run_io_service(boost::asio::io_service &io_service)
-{
-    io_service.run();
-}
-
 int main(int argc, char *argv[])
 {
-    unsigned int port        = 4000;
+    uint16_t port            = 4000;
     std::string  threads     = "";
     unsigned int concurrency = 0;
     
     po::options_description description("Available options");
     description.add_options()
         ( "help,h",                                       "show this help message"                            )
-        ( "port,p",    po::value<unsigned int>(&port),    "port number"                                       )
+        ( "port,p",    po::value<uint16_t>(&port),        "port number"                                       )
         ( "threads,t", po::value<std::string>(&threads),  "number of threads of execution (0 for autodetect)" )
         ;
 
@@ -105,18 +99,13 @@ int main(int argc, char *argv[])
         return EXIT_FAILURE;
     }
 
-    boost::asio::io_service io_service;
-
-    ma::application application(
-        io_service
-      , std::make_shared<boost::asio::io_service::work>(std::ref(io_service))
-      , port);
+    ma::application application{port};
 
     std::vector<std::thread> threadpool;
 
     for (unsigned int thr = 0; thr < concurrency; ++thr)
     {
-        threadpool.emplace_back(&run_io_service, std::ref(io_service));
+        threadpool.emplace_back([&application]{application.run();});
     }
     
     for (auto &pthread : threadpool)
@@ -124,7 +113,5 @@ int main(int argc, char *argv[])
         pthread.join();
     }
     
-    io_service.stop();
-
     return EXIT_SUCCESS;
 }

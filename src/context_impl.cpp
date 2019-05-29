@@ -1,3 +1,4 @@
+#if 0
 #include "context_impl.hpp"
 #include "client.hpp"
 #include <algorithm>
@@ -99,3 +100,4 @@ void context_impl::shutdown()
 }
 
 }
+#endif

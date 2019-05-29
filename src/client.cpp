@@ -1,3 +1,4 @@
+#if 0
 #include "client.hpp"
 #include "camera.hpp"
 #include "connection.hpp"
@@ -391,3 +392,4 @@ void client::on_connection_death(std::function<void ()> const &callback)
 }
 
 }
+#endif

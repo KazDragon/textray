@@ -1,3 +1,4 @@
+#if 0
 #pragma once
 
 #include "core.hpp"
@@ -80,3 +81,4 @@ private :
 
 }
 
+#endif

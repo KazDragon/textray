@@ -1,8 +1,7 @@
+#if 0
 #pragma once
 
 #include "context.hpp"
-#include "server.hpp"
-#include <boost/asio/io_service.hpp>
 
 namespace ma {
 
@@ -55,3 +54,4 @@ private :
 };
 
 }
+#endif
