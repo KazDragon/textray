@@ -252,6 +252,7 @@ void connection::async_get_terminal_type(
 void connection::on_window_size_changed(
     std::function<void (std::uint16_t, std::uint16_t)> const &continuation)
 {
+    pimpl_->on_window_size_changed_ = continuation;
 }
 
 }
