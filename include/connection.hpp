@@ -50,62 +50,41 @@ public :
     connection &operator=(connection &&other) noexcept;
 
     //* =====================================================================
-    /// \brief Asynchronously reads from the connection, calling the
-    ///        supplied continuation with the results.
+    /// \brief Returns whether the endpoint of the connection is still
+    ///        alive.
+    //* =====================================================================
+    bool is_alive() const;
+
+    //* =====================================================================
+    /// \brief Asynchronously reads from the connection.
     ///
-    /// \note If the continuation received 0 bytes, then the connection has
-    ///       died.
+    /// A single read may yield zero or more callbacks to the data 
+    /// continuation.  This is because parts or all of the data may be
+    /// consumed by Telnet handling.  Therefore, a second continuation is
+    /// provided to show that the requested read has been completed and a
+    /// new read request may be issued.
     //* =====================================================================
     void async_read(
-        std::function<void (serverpp::bytes)> const &continuation);
+        std::function<void (serverpp::bytes)> const &data_continuation,
+        std::function<void ()> const &read_complete_continuation);
 
     //* =====================================================================
     /// \brief Writes to the connection.
     //* =====================================================================
     void write(serverpp::bytes data);
 
-#if 0
     //* =====================================================================
-    /// \brief Starts reading from the other end of the connection.  Until
-    /// this is called, no reads will take place.
+    /// \brief Requests terminal type of the connection, calling the
+    ///        supplied continuation with the results.
     //* =====================================================================
-    void start();
+    void async_get_terminal_type(
+        std::function<void (std::string const &)> const &continuation);
 
-    //* =====================================================================
-    /// \brief Writes data to the connection.
-    //* =====================================================================
-    void write(std::string const &data);
-
-    //* =====================================================================
-    /// \brief Set a function to be called when data arrives from the
-    /// connection.
-    //* =====================================================================
-    void on_data_read(
-        std::function<void (std::string const &)> const &callback);
-    
     //* =====================================================================
     /// \brief Set a function to be called when the window size changes.
     //* =====================================================================
     void on_window_size_changed(
-        std::function<void (std::uint16_t, std::uint16_t)> const &callback);
-
-    //* =====================================================================
-    /// \brief Set up a callback to be called when the underlying socket
-    /// dies.
-    //* =====================================================================
-    void on_socket_death(std::function<void ()> const &callback);
-
-    //* =====================================================================
-    /// \brief Disconnects the socket.
-    //* =====================================================================
-    void disconnect();
-
-    //* =====================================================================
-    /// \brief Asynchronously retrieves the terminal type of the connection.
-    //* =====================================================================
-    void async_get_terminal_type(
-        std::function<void (std::string const &)> const &callback);
-#endif
+        std::function<void (std::uint16_t, std::uint16_t)> const &continuation);
 
 private :
     struct impl;

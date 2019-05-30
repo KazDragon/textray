@@ -1,8 +1,8 @@
 #include "application.hpp"
 #include "connection.hpp"
+#include "client.hpp"
 /*
 #include "camera.hpp"
-#include "client.hpp"
 #include "context_impl.hpp"
 #include <munin/aligned_layout.hpp>
 #include <munin/container.hpp>
@@ -52,70 +52,27 @@ public :
 
 private :
     // ======================================================================
-    // ADD_PENDING_CONNECTION
-    // ======================================================================
-    connection &create_pending_connection(serverpp::tcp_socket &&new_socket)
-    {
-        auto pending_connections_lock =
-            std::unique_lock<std::mutex>(pending_connections_mutex_);
-
-        pending_connections_.push_back(
-            boost::make_unique<connection>(std::move(new_socket)));
-        return *pending_connections_.back();
-    }
-
-    // ======================================================================
     // ON_ACCEPT
     // ======================================================================
     void on_accept(serverpp::tcp_socket &&new_socket)
     {
-        auto &pending_connection = 
-            create_pending_connection(std::move(new_socket));
-    }
-/*
-    void on_accept(std::shared_ptr<ma::socket> const &socket)
-    {
-        // Create the connection and client structures for the socket.
-        auto connection = std::make_shared<ma::connection>(socket);
-        pending_connections_.push_back(connection);
-        
-        // Before creating a client object, we first negotiate some
-        // knowledge about the connection.  Set up the callbacks for this.
-        connection->on_socket_death(
-            [this, wp=std::weak_ptr<ma::connection>(connection)] 
-            {
-                this->on_connection_death(wp);
-            });
-    
-        connection->on_window_size_changed(
-            [this, wp=std::weak_ptr<ma::connection>(connection)]
-            (auto w, auto h) 
-            {
-                this->on_window_size_changed(wp, w, h);
-            });
+        printf("Accepting new socket\n");
+        auto new_client = boost::make_unique<client>(
+            connection(std::move(new_socket)),
+            []{});
 
-        connection->async_get_terminal_type(
-            [this, 
-             ws=std::weak_ptr<ma::socket>(socket),
-             wc=std::weak_ptr<ma::connection>(connection)]
-            (auto const &type)
-            {
-                this->on_terminal_type(ws, wc, type);
-            });
-
-        connection->start();
+        auto clients_lock = std::unique_lock<std::mutex>(clients_mutex_);
+        clients_.push_back(std::move(new_client));
     }
 
     // ======================================================================
     // ON_TERMINAL_TYPE
     // ======================================================================
-    void on_terminal_type(
-        std::weak_ptr<ma::socket>     weak_socket
-      , std::weak_ptr<ma::connection>  weak_connection
-      , std::string const                   &terminal_type)
+    void on_terminal_type(connection &cnx, std::string const &terminal_type)
     {
         printf("Terminal type is: \"%s\"\n", terminal_type.c_str());
         
+        /*
         auto socket =     weak_socket.lock();
         auto connection = weak_connection.lock();
         
@@ -165,8 +122,10 @@ private :
                 client->set_window_size(80, 24);
             }
         }
+        */
     }
     
+    /*
     // ======================================================================
     // ON_CONNECTION_DEATH
     // ======================================================================
@@ -220,12 +179,11 @@ private :
 
     serverpp::tcp_server server_;
 
-    std::mutex pending_connections_mutex_;
-    std::vector<std::unique_ptr<ma::connection>> pending_connections_;
+    std::mutex clients_mutex_;
+    std::vector<std::unique_ptr<client>> clients_;
 
     /*
     // A vector of clients whose connections are being negotiated.
-    std::vector<std::shared_ptr<ma::connection>> pending_connections_;
     std::map<
         std::shared_ptr<ma::connection>, 
         std::pair<std::uint16_t, std::uint16_t>> pending_sizes_; 
