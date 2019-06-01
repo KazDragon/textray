@@ -1,9 +1,0 @@
-[submodule "munin"]
-	path = munin
-	url = git@github.com:KazDragon/munin.git
-[submodule "telnetpp"]
-	path = telnetpp
-	url = git@github.com:KazDragon/telnetpp.git
-[submodule "terminalpp"]
-	path = terminalpp
-	url = git@github.com:KazDragon/terminalpp.git

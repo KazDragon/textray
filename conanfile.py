@@ -1,22 +1,22 @@
 from conans import ConanFile, CMake, tools
 
 
-class TerminalppConan(ConanFile):
+class MuninAcceptanceConan(ConanFile):
     name = "munin-acceptance"
-    version = "1.3.0"
+    version = "0.0.1"
     license = "MIT"
     author = "KazDragon"
     url = "https://github.com/KazDragon/terminalpp"
-    description = "A C++ library for interacting with ANSI terminal windows"
+    description = "A test bed for Munin, implementing a text-based FPS view"
     topics = ("terminal-emulators", "ansi-escape-codes")
     settings = "os", "compiler", "build_type", "arch"
     exports = "*"
     options = {"shared": [True, False], "withTests": [True, False]}
     default_options = {"shared": False, "withTests": False}
-    requires = ("telnetpp/[>=2.0.0]@kazdragon/conan-public",
-                "munin/[>=0.3.1]@kazdragon/conan-public",
+    requires = ("serverpp/[>=0.0.1]@kazdragon/conan-public",
+                "telnetpp/[>=2.0.0]@kazdragon/conan-public",
                 "terminalpp/[>=1.3.0]@kazdragon/conan-public",
-                "serverpp/[>=0.0.1]@kazdragon/conan-public",
+                "munin/[>=0.3.1]@kazdragon/conan-public",
                 "boost_program_options/[>=1.69]@bincrafters/stable")
     generators = "cmake"
 
@@ -35,5 +35,5 @@ class TerminalppConan(ConanFile):
         self.copy("*.a", dst="lib", keep_path=False)
 
     def package_info(self):
-        self.cpp_info.libs = ["terminalpp"]
+        self.cpp_info.libs = ["munin-acceptance"]
 
