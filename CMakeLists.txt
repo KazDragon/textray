@@ -17,10 +17,7 @@ add_executable(munin_acceptance
     src/camera.cpp
     src/client.cpp
     src/connection.cpp
-    src/context_impl.cpp
     src/main.cpp
-    src/server.cpp
-    src/socket.cpp
     src/ui.cpp
 )
 
@@ -30,6 +27,7 @@ target_include_directories(munin_acceptance
 )
     
 target_link_libraries(munin_acceptance
+    CONAN_PKG::serverpp
     CONAN_PKG::telnetpp
     CONAN_PKG::terminalpp
     CONAN_PKG::munin

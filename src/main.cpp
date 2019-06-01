@@ -1,5 +1,4 @@
 #include "application.hpp"
-#include <boost/asio/io_service.hpp>
 #include <boost/format.hpp>
 #include <boost/program_options.hpp>
 #include <iostream>
@@ -9,21 +8,16 @@
 
 namespace po = boost::program_options;
 
-static void run_io_service(boost::asio::io_service &io_service)
-{
-    io_service.run();
-}
-
 int main(int argc, char *argv[])
 {
-    unsigned int port        = 4000;
+    uint16_t port            = 4000;
     std::string  threads     = "";
     unsigned int concurrency = 0;
     
     po::options_description description("Available options");
     description.add_options()
         ( "help,h",                                       "show this help message"                            )
-        ( "port,p",    po::value<unsigned int>(&port),    "port number"                                       )
+        ( "port,p",    po::value<uint16_t>(&port),        "port identifier"                                   )
         ( "threads,t", po::value<std::string>(&threads),  "number of threads of execution (0 for autodetect)" )
         ;
 
@@ -48,7 +42,7 @@ int main(int argc, char *argv[])
         }
         else if (vm.count("port") == 0)
         {
-            throw po::error("Port number must be specified");
+            throw po::error("Port identifier must be specified");
         }
 
         if (vm.count("threads") == 0)
@@ -86,7 +80,7 @@ int main(int argc, char *argv[])
     {
         if (strlen(err.what()) == 0)
         {
-            std::cout << boost::format("USAGE: %s <port number>|<options>\n")
+            std::cout << boost::format("USAGE: %s <port identifier>|<options>\n")
                         % argv[0]
                  << description
                  << std::endl;
@@ -95,7 +89,7 @@ int main(int argc, char *argv[])
         }
         else
         {
-            std::cerr << boost::format("ERROR: %s\n\nUSAGE: %s <port number>|<options>\n")
+            std::cerr << boost::format("ERROR: %s\n\nUSAGE: %s <port identifier>|<options>\n")
                         % err.what()
                         % argv[0]
                  << description
@@ -105,18 +99,13 @@ int main(int argc, char *argv[])
         return EXIT_FAILURE;
     }
 
-    boost::asio::io_service io_service;
-
-    ma::application application(
-        io_service
-      , std::make_shared<boost::asio::io_service::work>(std::ref(io_service))
-      , port);
+    ma::application application{port};
 
     std::vector<std::thread> threadpool;
 
     for (unsigned int thr = 0; thr < concurrency; ++thr)
     {
-        threadpool.emplace_back(&run_io_service, std::ref(io_service));
+        threadpool.emplace_back([&application]{application.run();});
     }
     
     for (auto &pthread : threadpool)
@@ -124,7 +113,5 @@ int main(int argc, char *argv[])
         pthread.join();
     }
     
-    io_service.stop();
-
     return EXIT_SUCCESS;
 }

@@ -1,17 +1,15 @@
 #pragma once
 
 #include "core.hpp"
-#include <terminalpp/ansi/control_sequence.hpp>
-#include <terminalpp/ansi/mouse.hpp>
-#include <terminalpp/virtual_key.hpp>
+#include <serverpp/core.hpp>
+#include <functional>
 #include <memory>
-#include <string>
-#include <utility>
-#include <vector>
+
+namespace serverpp {
+class tcp_socket;
+}
 
 namespace ma {
-
-class socket;
 
 //* =========================================================================
 /// \brief An connection to a socket that abstracts away details about the
@@ -25,7 +23,12 @@ public :
     /// a communications point, and calls the passed function whenever data
     /// is received.
     //* =====================================================================
-    connection(std::shared_ptr<ma::socket> const &socket);
+    explicit connection(serverpp::tcp_socket &&socket);
+
+    //* =====================================================================
+    /// \brief Move constructor
+    //* =====================================================================
+    connection(connection &&other) noexcept;
 
     //* =====================================================================
     /// \brief Destructor.
@@ -33,50 +36,50 @@ public :
     ~connection();
 
     //* =====================================================================
-    /// \brief Starts reading from the other end of the connection.  Until
-    /// this is called, no reads will take place.
+    /// \brief Move assignment
     //* =====================================================================
-    void start();
+    connection &operator=(connection &&other) noexcept;
 
     //* =====================================================================
-    /// \brief Writes data to the connection.
+    /// \brief Returns whether the endpoint of the connection is still
+    ///        alive.
     //* =====================================================================
-    void write(std::string const &data);
+    bool is_alive() const;
 
     //* =====================================================================
-    /// \brief Set a function to be called when data arrives from the
-    /// connection.
+    /// \brief Asynchronously reads from the connection.
+    ///
+    /// A single read may yield zero or more callbacks to the data 
+    /// continuation.  This is because parts or all of the data may be
+    /// consumed by Telnet handling.  Therefore, a second continuation is
+    /// provided to show that the requested read has been completed and a
+    /// new read request may be issued.
     //* =====================================================================
-    void on_data_read(
-        std::function<void (std::string const &)> const &callback);
-    
+    void async_read(
+        std::function<void (serverpp::bytes)> const &data_continuation,
+        std::function<void ()> const &read_complete_continuation);
+
+    //* =====================================================================
+    /// \brief Writes to the connection.
+    //* =====================================================================
+    void write(serverpp::bytes data);
+
+    //* =====================================================================
+    /// \brief Requests terminal type of the connection, calling the
+    ///        supplied continuation with the results.
+    //* =====================================================================
+    void async_get_terminal_type(
+        std::function<void (std::string const &)> const &continuation);
+
     //* =====================================================================
     /// \brief Set a function to be called when the window size changes.
     //* =====================================================================
     void on_window_size_changed(
-        std::function<void (std::uint16_t, std::uint16_t)> const &callback);
-
-    //* =====================================================================
-    /// \brief Set up a callback to be called when the underlying socket
-    /// dies.
-    //* =====================================================================
-    void on_socket_death(std::function<void ()> const &callback);
-
-    //* =====================================================================
-    /// \brief Disconnects the socket.
-    //* =====================================================================
-    void disconnect();
-
-    //* =====================================================================
-    /// \brief Asynchronously retrieves the terminal type of the connection.
-    //* =====================================================================
-    void async_get_terminal_type(
-        std::function<void (std::string const &)> const &callback);
+        std::function<void (std::uint16_t, std::uint16_t)> const &continuation);
 
 private :
     struct impl;
-    std::shared_ptr<impl> pimpl_;
+    std::unique_ptr<impl> pimpl_;
 };
 
 }
-

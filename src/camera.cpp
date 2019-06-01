@@ -22,7 +22,7 @@ static void render_floor(
     terminalpp::extent size)
 {
     using namespace terminalpp::literals;
-    static auto const floor_brush = "\\[3_"_ets[0];
+    static auto const floor_brush = "\\[4#"_ets[0];
     
     auto const min_floor_row = size.height / 2;
     for (int row = min_floor_row; row < size.height; ++row)
