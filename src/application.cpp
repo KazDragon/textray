@@ -1,17 +1,8 @@
 #include "application.hpp"
 #include "connection.hpp"
 #include "client.hpp"
-/*
-#include "camera.hpp"
-#include "context_impl.hpp"
-#include <munin/aligned_layout.hpp>
-#include <munin/container.hpp>
-*/
 #include <serverpp/tcp_server.hpp>
 #include <boost/make_unique.hpp>
-/*
-#include <map>
-*/
 #include <utility>
 
 namespace ma {
@@ -56,7 +47,6 @@ private :
     // ======================================================================
     void on_accept(serverpp::tcp_socket &&new_socket)
     {
-        printf("Accepting new socket\n");
         auto new_client = boost::make_unique<client>(
             connection(std::move(new_socket)),
             []{});
@@ -65,129 +55,10 @@ private :
         clients_.push_back(std::move(new_client));
     }
 
-    // ======================================================================
-    // ON_TERMINAL_TYPE
-    // ======================================================================
-    void on_terminal_type(connection &cnx, std::string const &terminal_type)
-    {
-        printf("Terminal type is: \"%s\"\n", terminal_type.c_str());
-        
-        /*
-        auto socket =     weak_socket.lock();
-        auto connection = weak_connection.lock();
-        
-        if (socket != NULL && connection != NULL)
-        {
-            printf("Clearing pending connection\n");
-            auto pending_connection =
-                std::find(
-                    pending_connections_.begin()
-                  , pending_connections_.end()
-                  , connection);
-            
-            // There is a possibility that this is a stray terminal type.
-            // If so, ignore it.
-            if (pending_connection == pending_connections_.end())
-            {
-                return;
-            }
-            
-            pending_connections_.erase(pending_connection);
-
-            auto client =
-                std::make_shared<ma::client>(std::ref(io_service_));
-            client->connect(connection);
-            
-            client->on_connection_death(bind(
-                &impl::on_client_death
-              , this
-              , std::weak_ptr<ma::client>(client)));
-
-  
-            context_->add_client(client);
-
-            // If the window's size has been set by the NAWS process,
-            // then update it to that.  Otherwise, use the standard 80,24.
-            auto psize = pending_sizes_.find(connection);
-            
-            if (psize != pending_sizes_.end())
-            {
-                client->set_window_size(
-                    psize->second.first
-                  , psize->second.second);
-                pending_sizes_.erase(connection);
-            }
-            else
-            {
-                client->set_window_size(80, 24);
-            }
-        }
-        */
-    }
-    
-    /*
-    // ======================================================================
-    // ON_CONNECTION_DEATH
-    // ======================================================================
-    void on_connection_death(std::weak_ptr<ma::connection> const &weak_connection)
-    {
-        auto connection = weak_connection.lock();
-    
-        if (connection != NULL)
-        {
-            pending_connections_.erase(remove(
-                    pending_connections_.begin()
-                  , pending_connections_.end()
-                  , connection)
-              , pending_connections_.end());
-            pending_sizes_.erase(connection);
-        }
-    }
-    
-    // ======================================================================
-    // ON_CLIENT_DEATH
-    // ======================================================================
-    void on_client_death(std::weak_ptr<ma::client> &weak_client)
-    {
-        auto client = weak_client.lock();
-        
-        if (client != NULL)
-        {
-            context_->remove_client(client);
-        }
-    }
-
-    // ======================================================================
-    // ON_WINDOW_SIZE_CHANGED
-    // ======================================================================
-    void on_window_size_changed(
-        std::weak_ptr<ma::connection> weak_connection,
-        std::uint16_t                 width,
-        std::uint16_t                 height)
-    {
-        // This is only called during the negotiation process.  We save
-        // the size so that it can be given to the client once the process
-        // has completed.
-        auto connection = weak_connection.lock();
-        
-        if (connection != NULL)
-        {
-            pending_sizes_[connection] = std::make_pair(width, height);
-        }
-    }
-    */
-
     serverpp::tcp_server server_;
 
     std::mutex clients_mutex_;
     std::vector<std::unique_ptr<client>> clients_;
-
-    /*
-    // A vector of clients whose connections are being negotiated.
-    std::map<
-        std::shared_ptr<ma::connection>, 
-        std::pair<std::uint16_t, std::uint16_t>> pending_sizes_; 
-    */
 };
 
 // ==========================================================================

@@ -17,7 +17,6 @@ add_executable(munin_acceptance
     src/camera.cpp
     src/client.cpp
     src/connection.cpp
-    src/context_impl.cpp
     src/main.cpp
     src/ui.cpp
 )

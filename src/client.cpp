@@ -1,15 +1,14 @@
 #include "client.hpp"
 #include "connection.hpp"
-
 #include "camera.hpp"
 #include "floorplan.hpp"
 #include "lambda_visitor.hpp"
 #include "vector2d.hpp"
 #include "ui.hpp"
 
-#include <munin/window.hpp>
 #include <terminalpp/ansi_terminal.hpp>
 #include <terminalpp/canvas.hpp>
+#include <munin/window.hpp>
 
 #include <boost/make_unique.hpp>
 #include <boost/range/algorithm/for_each.hpp>
@@ -66,11 +65,6 @@ struct state
 struct setup_state final : state
 {
 public:
-    setup_state()
-    {
-        printf("Entered setup state\n");
-    }
-
     void on_discarded_data(
         std::function<void (serverpp::bytes)> const &callback)
     {
@@ -85,14 +79,12 @@ public:
 
     connection_state terminal_type(std::string const &type) override
     {
-        printf("Received terminal type: %s\n", type.c_str());
         return connection_state::main;
     }
 
     connection_state window_size_changed(
         std::uint16_t width, std::uint16_t height) override
     {
-        printf("setup: received window size [%d,%d]\n", width, height);
         return connection_state::setup;
     }
 
@@ -117,7 +109,6 @@ public:
         ui_(std::make_shared<ui>(floorplan_, position_, heading_, to_radians(fov_))),
         window_(ui_)
     {
-        printf("Entered main state\n");
         window_.on_repaint_request.connect([this]{on_repaint();});
         on_repaint();
     }
@@ -143,18 +134,16 @@ public:
 
     connection_state terminal_type(std::string const &type) override
     {
-        printf("Terminal type = %s\n", type.c_str());
         return connection_state::main;
     }
 
     connection_state window_size_changed(
         std::uint16_t width, std::uint16_t height) override
     {
-        printf("main: received window size [%d,%d]\n", width, height);
-
         if (canvas_.size() != terminalpp::extent{width, height})
         {
             canvas_ = terminalpp::canvas({width, height});
+            terminal_.set_size({width, height});
         }
             
         on_repaint();
@@ -255,7 +244,6 @@ private:
     // ======================================================================
     bool keypress_event(terminalpp::virtual_key const &vk)
     {
-        printf("Received keypress event\n");
         static struct {
             terminalpp::vk key;
             void (main_state::*handle)();
@@ -292,7 +280,6 @@ private:
 
     void event(boost::any const &ev)
     {
-        printf("Received event\n");
         // General key handler for movement
         bool consumed = false;
         auto *vk = boost::any_cast<terminalpp::virtual_key>(&ev);
@@ -334,8 +321,9 @@ private:
 
     void on_repaint()
     {
-        auto const &output_bytes = string_to_bytes(window_.repaint(canvas_, terminal_));
-        printf("Repainting %d bytes\n", output_bytes.size());
+        std::string const &output = window_.repaint(canvas_, terminal_);
+        auto const &output_bytes = string_to_bytes(output);
+
         connection_.write(output_bytes);
     }
 
@@ -358,11 +346,6 @@ private:
 // ======================================================================
 struct dead_state final : state
 {
-    dead_state()
-    {
-        printf("Entered dead state\n");
-    }
-    
     connection_state handle_data(serverpp::bytes data) override
     {
         return connection_state::dead;
@@ -376,7 +359,6 @@ struct dead_state final : state
     connection_state window_size_changed(
         std::uint16_t width, std::uint16_t height) override
     {
-        printf("dead: received window size [%d,%d]\n", width, height);
         return connection_state::dead;
     }
 };
@@ -405,13 +387,13 @@ public :
         connection_.on_window_size_changed(
             [&](std::uint16_t width, std::uint16_t height)
             {
-                printf("Window size change to [%d,%d]\n", width, height);
                 window_width_ = width;
                 window_height_ = height;
                 enter_state(state_->window_size_changed(width, height));
             });
 
         enter_state(connection_state::setup);
+        schedule_next_read();
     }
 
 private :
@@ -481,8 +463,6 @@ private :
                     return;
             }
         }
-
-        schedule_next_read();
     }
 
     // ======================================================================
@@ -493,7 +473,6 @@ private :
         connection_.async_read(
             [this](serverpp::bytes data)
             {
-                printf("Handling %d bytes\n", data.size());
                 enter_state(state_->handle_data(data));
             },
             [this]()
@@ -504,22 +483,21 @@ private :
                 }
                 else
                 {
-                    printf("Connection died\n");
                     enter_state(connection_state::dead);
                 }
             });
     }
 
-   connection connection_;
-   std::function<void ()> connection_died_;
+    connection connection_;
+    std::function<void ()> connection_died_;
 
-   connection_state connection_state_{connection_state::init};
-   std::unique_ptr<state> state_;
+    connection_state connection_state_{connection_state::init};
+    std::unique_ptr<state> state_;
 
-   std::uint16_t window_width_{80};
-   std::uint16_t window_height_{24};
+    std::uint16_t window_width_{80};
+    std::uint16_t window_height_{24};
 
-   serverpp::byte_storage discarded_data_;
+    serverpp::byte_storage discarded_data_;
 };
 
 // ==========================================================================
@@ -538,50 +516,6 @@ client::client(
 client::~client()
 {
 }
-
-/*
-// ==========================================================================
-// SET_CONNECTION
-// ==========================================================================
-void client::connect(std::shared_ptr<connection> const &cnx)
-{
-    pimpl_->connect(cnx);
-}
-
-// ==========================================================================
-// SET_WINDOW_TITLE
-// ==========================================================================
-void client::set_window_title(std::string const &title)
-{
-    pimpl_->set_window_title(title);
-}
-
-// ==========================================================================
-// SET_WINDOW_SIZE
-// ==========================================================================
-void client::set_window_size(std::uint16_t width, std::uint16_t height)
-{
-    pimpl_->set_window_size(width, height);
-}
-
-// ==========================================================================
-// DISCONNECT
-// ==========================================================================
-void client::disconnect()
-{
-    //pimpl_->get_window()->use_normal_screen_buffer();
-    //pimpl_->get_window()->disable_mouse_tracking();
-    pimpl_->disconnect();
-}
-
-// ==========================================================================
-// ON_CONNECTION_DEATH
-// ==========================================================================
-void client::on_connection_death(std::function<void ()> const &callback)
-{
-    pimpl_->on_connection_death(callback);
-}
-*/
 
 }
 

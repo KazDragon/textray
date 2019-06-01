@@ -9,13 +9,7 @@
 #include <telnetpp/options/naws/client.hpp>
 #include <telnetpp/options/suppress_ga/server.hpp>
 #include <telnetpp/options/terminal_type/client.hpp>
-/*
-#include <boost/asio/deadline_timer.hpp>
-#include <boost/asio/placeholders.hpp>
-#include <deque>
-#include <string>
-#include <utility>
-*/
+
 namespace ma {
 
 // ==========================================================================
