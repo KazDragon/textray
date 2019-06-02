@@ -127,9 +127,7 @@ public:
                     });
             });
 
-        return (data.empty() && !connection_.is_alive())
-             ? connection_state::dead 
-             : connection_state::main;
+        return connection_state::main;
     }
 
     connection_state terminal_type(std::string const &type) override
@@ -436,6 +434,7 @@ private :
     void enter_dead_state()
     {
         state_ = boost::make_unique<dead_state>();
+        connection_died_();
     }
 
     // ======================================================================
@@ -505,8 +504,13 @@ private :
 // ==========================================================================
 client::client(
     connection &&cnx,
-    std::function<void ()> const &connection_died)
-  : pimpl_(boost::make_unique<impl>(std::move(cnx), connection_died))
+    std::function<void (client const &)> const &connection_died)
+  : pimpl_(boost::make_unique<impl>(
+        std::move(cnx), 
+        [this, connection_died]()
+        {
+            connection_died(*this);
+        }))
 {
 }
 
