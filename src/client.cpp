@@ -98,8 +98,9 @@ private:
 struct main_state final : state
 {
 public:
-    main_state(connection &cnx)
-        : connection_(cnx),
+    main_state(connection &cnx, std::function<void ()> const &shutdown)
+      : connection_(cnx),
+        shutdown_(shutdown),
         terminal_(main_state::create_behaviour()),
         canvas_({80, 24}),
         floorplan_(std::make_shared<floorplan>(level_map)),
@@ -238,6 +239,22 @@ private:
     }
 
     // ======================================================================
+    // QUIT
+    // ======================================================================
+    void quit()
+    {
+        connection_.close();
+    }
+
+    // ======================================================================
+    // SHUTDOWN
+    // ======================================================================
+    void shutdown()
+    {
+        shutdown_();
+    }
+
+    // ======================================================================
     // KEYPRESS_EVENT
     // ======================================================================
     bool keypress_event(terminalpp::virtual_key const &vk)
@@ -256,6 +273,8 @@ private:
             { terminalpp::vk::lowercase_z, &main_state::zoom_in       },
             { terminalpp::vk::lowercase_x, &main_state::zoom_out      },
             { terminalpp::vk::lowercase_c, &main_state::reset_zoom    },
+            { terminalpp::vk::uppercase_q, &main_state::quit          },
+            { terminalpp::vk::uppercase_p, &main_state::shutdown      },
         };
         
         auto handler = boost::find_if(
@@ -326,6 +345,7 @@ private:
     }
 
     connection &connection_;
+    std::function<void ()> shutdown_;
     terminalpp::ansi_terminal terminal_;
     terminalpp::canvas canvas_;
     
@@ -372,9 +392,13 @@ public :
     // ======================================================================
     // CONSTRUCTOR
     // ======================================================================
-    impl(connection &&cnx, std::function<void ()> const &connection_died)
+    impl(
+        connection &&cnx, 
+        std::function<void ()> const &connection_died,
+        std::function<void ()> const &shutdown)
       : connection_(std::move(cnx)),
-        connection_died_(connection_died)
+        connection_died_(connection_died),
+        shutdown_(shutdown)
     {
         connection_.async_get_terminal_type(
             [&](std::string const &type)
@@ -419,7 +443,8 @@ private :
     // ======================================================================
     void enter_main_state()
     {
-        state_ = boost::make_unique<main_state>(std::ref(connection_));
+        state_ = boost::make_unique<main_state>(
+            std::ref(connection_), shutdown_);
 
         serverpp::byte_storage discarded_data;
         discarded_data_.swap(discarded_data);
@@ -489,6 +514,7 @@ private :
 
     connection connection_;
     std::function<void ()> connection_died_;
+    std::function<void ()> shutdown_;
 
     connection_state connection_state_{connection_state::init};
     std::unique_ptr<state> state_;
@@ -504,13 +530,15 @@ private :
 // ==========================================================================
 client::client(
     connection &&cnx,
-    std::function<void (client const &)> const &connection_died)
+    std::function<void (client const &)> const &connection_died,
+    std::function<void ()> const &shutdown)
   : pimpl_(boost::make_unique<impl>(
         std::move(cnx), 
         [this, connection_died]()
         {
             connection_died(*this);
-        }))
+        },
+        shutdown))
 {
 }
 

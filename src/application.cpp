@@ -53,6 +53,10 @@ private :
             [this](client const &dead_client)
             {
                 handle_closed_connection(dead_client);
+            },
+            [this]()
+            {
+                shutdown();
             });
 
         auto clients_lock = std::unique_lock<std::mutex>(clients_mutex_);
