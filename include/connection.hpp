@@ -47,6 +47,11 @@ public :
     bool is_alive() const;
 
     //* =====================================================================
+    /// \brief Closes the connection.
+    //* =====================================================================
+    void close();
+
+    //* =====================================================================
     /// \brief Asynchronously reads from the connection.
     ///
     /// A single read may yield zero or more callbacks to the data 

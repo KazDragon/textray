@@ -14,7 +14,8 @@ public :
     //* =====================================================================
     explicit client(
         connection &&cnx, 
-        std::function<void ()> const &connection_died);
+        std::function<void (client const&)> const &connection_died,
+        std::function<void ()> const &shutdown);
 
     //* =====================================================================
     /// \brief Destructor
