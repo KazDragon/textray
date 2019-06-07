@@ -10,9 +10,11 @@
 #include <terminalpp/canvas.hpp>
 #include <munin/window.hpp>
 
+#include <boost/asio/strand.hpp>
 #include <boost/make_unique.hpp>
 #include <boost/range/algorithm/for_each.hpp>
 #include <boost/range/algorithm/find_if.hpp>
+#include <atomic>
 #include <cmath>
 
 namespace ma {
@@ -98,8 +100,13 @@ private:
 struct main_state final : state
 {
 public:
-    main_state(connection &cnx, std::function<void ()> const &shutdown)
+    main_state(
+        connection &cnx, 
+        boost::asio::io_context &io_context, 
+        std::function<void ()> const &shutdown)
       : connection_(cnx),
+        io_context_(io_context),
+        strand_(io_context),
         shutdown_(shutdown),
         terminal_(main_state::create_behaviour()),
         canvas_({80, 24}),
@@ -108,10 +115,16 @@ public:
         heading_(to_radians(210)),
         fov_(90),
         ui_(std::make_shared<ui>(floorplan_, position_, heading_, to_radians(fov_))),
-        window_(ui_)
+        window_(ui_),
+        repaint_requested_(false)
     {
-        window_.on_repaint_request.connect([this]{on_repaint();});
-        on_repaint();
+        window_.on_repaint_request.connect(
+            [this]
+            {
+                repaint_requested_ = true;
+                strand_.post([this]{on_repaint();});
+            });
+        window_.on_repaint_request();
     }
 
     connection_state handle_data(serverpp::bytes data) override
@@ -145,7 +158,7 @@ public:
             terminal_.set_size({width, height});
         }
             
-        on_repaint();
+        window_.on_repaint_request();
 
         return connection_state::main;
     }
@@ -338,13 +351,19 @@ private:
 
     void on_repaint()
     {
-        std::string const &output = window_.repaint(canvas_, terminal_);
-        auto const &output_bytes = string_to_bytes(output);
+        bool b = true;
+        if (repaint_requested_.compare_exchange_strong(b, false))
+        {
+            std::string const &output = window_.repaint(canvas_, terminal_);
+            auto const &output_bytes = string_to_bytes(output);
 
-        connection_.write(output_bytes);
+            connection_.write(output_bytes);
+        }
     }
 
     connection &connection_;
+    boost::asio::io_context &io_context_;
+    boost::asio::io_context::strand strand_;
     std::function<void ()> shutdown_;
     terminalpp::ansi_terminal terminal_;
     terminalpp::canvas canvas_;
@@ -355,8 +374,9 @@ private:
     double fov_;
 
     std::shared_ptr<ui> ui_;
-
     munin::window window_;
+
+    std::atomic<bool> repaint_requested_;
 };
 
 // ======================================================================
@@ -394,9 +414,11 @@ public :
     // ======================================================================
     impl(
         connection &&cnx, 
+        boost::asio::io_context &io_context,
         std::function<void ()> const &connection_died,
         std::function<void ()> const &shutdown)
       : connection_(std::move(cnx)),
+        io_context_(io_context),
         connection_died_(connection_died),
         shutdown_(shutdown)
     {
@@ -418,8 +440,15 @@ public :
         schedule_next_read();
     }
 
-private :
+    // ======================================================================
+    // CLOSE
+    // ======================================================================
+    void close()
+    {
+        connection_.close();
+    }
 
+private :
     // ======================================================================
     // ENTER_SETUP_STATE
     // ======================================================================
@@ -444,7 +473,7 @@ private :
     void enter_main_state()
     {
         state_ = boost::make_unique<main_state>(
-            std::ref(connection_), shutdown_);
+            std::ref(connection_), io_context_, shutdown_);
 
         serverpp::byte_storage discarded_data;
         discarded_data_.swap(discarded_data);
@@ -513,6 +542,8 @@ private :
     }
 
     connection connection_;
+    boost::asio::io_context &io_context_;
+
     std::function<void ()> connection_died_;
     std::function<void ()> shutdown_;
 
@@ -530,10 +561,12 @@ private :
 // ==========================================================================
 client::client(
     connection &&cnx,
+    boost::asio::io_context &io_context,
     std::function<void (client const &)> const &connection_died,
     std::function<void ()> const &shutdown)
   : pimpl_(boost::make_unique<impl>(
         std::move(cnx), 
+        io_context,
         [this, connection_died]()
         {
             connection_died(*this);
@@ -547,6 +580,14 @@ client::client(
 // ==========================================================================
 client::~client()
 {
+}
+
+// ==========================================================================
+// CLOSE
+// ==========================================================================
+void client::close()
+{
+    pimpl_->close();
 }
 
 }

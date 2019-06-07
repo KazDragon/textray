@@ -17,21 +17,16 @@ public :
     // ======================================================================
     // CONSTRUCTOR
     // ======================================================================
-    impl(serverpp::port_identifier port)
-      : server_(port)
-    {
-    }
-
-    // ======================================================================
-    /// RUN
-    // ======================================================================
-    void run()
-    {
-        server_.accept(
+    impl(boost::asio::io_context &io_context, serverpp::port_identifier port)
+      : server_(
+            io_context, 
+            port,
             [this](serverpp::tcp_socket &&new_socket)
             {
                 on_accept(std::move(new_socket));
-            });
+            }),
+        io_context_(io_context)
+    {
     }
 
     // ======================================================================
@@ -40,6 +35,7 @@ public :
     void shutdown()
     {
         server_.shutdown();
+        close_all_connections();
     }
 
 private :
@@ -50,6 +46,7 @@ private :
     {
         auto new_client = boost::make_unique<client>(
             connection(std::move(new_socket)),
+            io_context_,
             [this](client const &dead_client)
             {
                 handle_closed_connection(dead_client);
@@ -61,6 +58,18 @@ private :
 
         auto clients_lock = std::unique_lock<std::mutex>(clients_mutex_);
         clients_.push_back(std::move(new_client));
+    }
+
+    // ======================================================================
+    // CLOSE_ALL_CONNECTIONS
+    // ======================================================================
+    void close_all_connections()
+    {
+        auto clients_lock = std::unique_lock<std::mutex>(clients_mutex_);
+        for (auto &connection : clients_)
+        {
+            connection->close();
+        }
     }
 
     // ======================================================================
@@ -83,6 +92,7 @@ private :
     }
 
     serverpp::tcp_server server_;
+    boost::asio::io_context &io_context_;
 
     std::mutex clients_mutex_;
     std::vector<std::unique_ptr<client>> clients_;
@@ -91,8 +101,10 @@ private :
 // ==========================================================================
 // CONSTRUCTOR
 // ==========================================================================
-application::application(serverpp::port_identifier port)
-    : pimpl_(boost::make_unique<impl>(port))
+application::application(
+    boost::asio::io_context &io_context,
+    serverpp::port_identifier port)
+    : pimpl_(boost::make_unique<impl>(io_context, port))
 {
 }
 
@@ -101,14 +113,6 @@ application::application(serverpp::port_identifier port)
 // ==========================================================================
 application::~application()
 {
-}
-
-// ==========================================================================
-// RUN
-// ==========================================================================
-void application::run()
-{
-    pimpl_->run();
 }
 
 // ==========================================================================
