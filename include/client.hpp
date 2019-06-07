@@ -1,5 +1,6 @@
 #pragma once
 
+#include <boost/asio/io_context.hpp>
 #include <memory>
 
 namespace ma {
@@ -14,6 +15,7 @@ public :
     //* =====================================================================
     explicit client(
         connection &&cnx, 
+        boost::asio::io_context &io_context,
         std::function<void (client const&)> const &connection_died,
         std::function<void ()> const &shutdown);
 
@@ -21,6 +23,11 @@ public :
     /// \brief Destructor
     //* =====================================================================
     ~client();
+
+    //* =====================================================================
+    /// \brief Closes the connection.
+    //* =====================================================================
+    void close();
 
 private :
     class impl;

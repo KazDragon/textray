@@ -1,6 +1,7 @@
 #pragma once
 
 #include <serverpp/core.hpp>
+#include <boost/asio/io_context.hpp>
 #include <memory>
 
 namespace ma {
@@ -12,10 +13,11 @@ namespace ma {
 class application final
 {
 public :
-    application(serverpp::port_identifier port);
+    application(
+        boost::asio::io_context &io_context,
+        serverpp::port_identifier port);
     ~application();
     
-    void run();
     void shutdown();
 
 private :
