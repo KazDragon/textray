@@ -32,5 +32,6 @@ target_link_libraries(munin_acceptance
     CONAN_PKG::terminalpp
     CONAN_PKG::munin
     CONAN_PKG::boost_program_options
+    CONAN_PKG::boost_format
 )
     

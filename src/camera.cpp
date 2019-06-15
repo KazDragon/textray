@@ -202,7 +202,7 @@ void camera::move_to(vector2d position, double heading)
     position_ = std::move(position);
     heading_ = std::move(heading);
     on_redraw({
-        munin::rectangle({}, get_size())
+        terminalpp::rectangle({}, get_size())
     });
 }
 
@@ -212,7 +212,7 @@ void camera::set_fov(double fov)
     assert(fov < M_PI - 0.0001);
     fov_ = std::move(fov);
     on_redraw({
-        munin::rectangle({}, get_size())
+        terminalpp::rectangle({}, get_size())
     });
 }
 
@@ -224,7 +224,7 @@ void camera::do_set_size(terminalpp::extent const &size)
 
 void camera::do_draw(
     munin::render_surface &surface, 
-    munin::rectangle const &region) const
+    terminalpp::rectangle const &region) const
 {
     if (get_size() != terminalpp::extent(0, 0))
     {
