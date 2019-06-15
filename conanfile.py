@@ -17,7 +17,8 @@ class MuninAcceptanceConan(ConanFile):
                 "telnetpp/[>=2.0.0]@kazdragon/conan-public",
                 "terminalpp/[>=1.3.0]@kazdragon/conan-public",
                 "munin/[>=0.3.1]@kazdragon/conan-public",
-                "boost_program_options/[>=1.69]@bincrafters/stable")
+                "boost_program_options/[>=1.69]@bincrafters/stable",
+                "boost_format/[>=1.69]@bincrafters/stable")
     generators = "cmake"
 
     def build(self):
