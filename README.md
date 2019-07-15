@@ -1,4 +1,4 @@
-# munin-acceptance
+# Textray
 A test-bed and example usage for various projects, including Server++, 
 Telnet++, Terminal++ and Munin.
 
