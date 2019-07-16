@@ -5,7 +5,7 @@
 #include <munin/image.hpp>
 #include <munin/view.hpp>
 
-namespace ma {
+namespace textray {
  
 struct ui::impl
 {

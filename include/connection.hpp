@@ -9,7 +9,7 @@ namespace serverpp {
 class tcp_socket;
 }
 
-namespace ma {
+namespace textray {
 
 //* =========================================================================
 /// \brief An connection to a socket that abstracts away details about the

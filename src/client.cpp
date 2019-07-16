@@ -17,7 +17,7 @@
 #include <atomic>
 #include <cmath>
 
-namespace ma {
+namespace textray {
 
 namespace {
 

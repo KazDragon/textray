@@ -2,7 +2,7 @@
 #include <boost/variant/apply_visitor.hpp>
 #include <utility>
 
-namespace ma { namespace detail {
+namespace textray { namespace detail {
 
 template <typename ReturnType, typename... Lambdas>
 struct lambda_visitor;

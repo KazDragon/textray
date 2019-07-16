@@ -3,7 +3,7 @@
 #include <boost/asio/io_context.hpp>
 #include <memory>
 
-namespace ma {
+namespace textray {
 
 class connection;
 
