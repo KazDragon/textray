@@ -10,7 +10,7 @@
 #include <telnetpp/options/suppress_ga/server.hpp>
 #include <telnetpp/options/terminal_type/client.hpp>
 
-namespace ma {
+namespace textray {
 
 // ==========================================================================
 // CONNECTION::IMPLEMENTATION STRUCTURE

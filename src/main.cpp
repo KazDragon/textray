@@ -100,7 +100,7 @@ int main(int argc, char *argv[])
     }
 
     boost::asio::io_context io_context;
-    ma::application application{io_context, port};
+    textray::application application{io_context, port};
 
     std::vector<std::thread> threadpool;
 

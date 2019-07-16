@@ -3,7 +3,7 @@
 #include "core.hpp"
 #include <cmath>
 
-namespace ma {
+namespace textray {
 
 //* =========================================================================
 /// \brief A class that represents a vector in space.

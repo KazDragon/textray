@@ -4,7 +4,7 @@
 #include <boost/asio/io_context.hpp>
 #include <memory>
 
-namespace ma {
+namespace textray {
     
 //* =========================================================================
 /// \brief A class that implements the main engine for the server.

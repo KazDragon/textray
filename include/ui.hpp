@@ -5,7 +5,7 @@
 #include <munin/composite_component.hpp>
 #include <memory>
 
-namespace ma {
+namespace textray {
     
 class ui : public munin::composite_component
 {

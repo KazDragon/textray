@@ -6,7 +6,7 @@
 #include <munin/image.hpp>
 #include <memory>
 
-namespace ma {
+namespace textray {
     
 class camera : public munin::basic_component
 {

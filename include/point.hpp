@@ -2,7 +2,7 @@
 
 #include "core.hpp"
 
-namespace ma {
+namespace textray {
 
 //* =========================================================================
 /// \brief A class that represents a point in space.

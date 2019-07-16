@@ -2,7 +2,7 @@
 
 #include <cstdint>
 
-namespace ma {
+namespace textray {
     
 using byte = std::uint8_t;
 

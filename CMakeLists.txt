@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.2 FATAL_ERROR)
-project(munin-acceptance)
+project(textray)
 cmake_policy(VERSION 3.2)
 
 if (POLICY CMP0063)
@@ -12,7 +12,7 @@ conan_basic_setup(TARGETS NO_OUTPUT_DIRS)
 
 set(CMAKE_CXX_STANDARD 14)
 
-add_executable(munin_acceptance
+add_executable(textray
     src/application.cpp
     src/camera.cpp
     src/client.cpp
@@ -21,12 +21,12 @@ add_executable(munin_acceptance
     src/ui.cpp
 )
 
-target_include_directories(munin_acceptance
+target_include_directories(textray
     PRIVATE
         ${PROJECT_SOURCE_DIR}/include
 )
     
-target_link_libraries(munin_acceptance
+target_link_libraries(textray
     CONAN_PKG::serverpp
     CONAN_PKG::telnetpp
     CONAN_PKG::terminalpp

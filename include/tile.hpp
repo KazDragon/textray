@@ -2,7 +2,7 @@
 
 #include <terminalpp/element.hpp>
 
-namespace ma {
+namespace textray {
     
 struct tile
 {

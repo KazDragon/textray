@@ -3,7 +3,7 @@
 #include "tile.hpp"
 #include <array>
 
-namespace ma {
+namespace textray {
 
 using floorplan = std::array<std::array<tile, 8>, 9>;
 

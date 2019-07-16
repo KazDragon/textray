@@ -6,7 +6,7 @@
 #include <boost/range/algorithm/find_if.hpp>
 #include <utility>
 
-namespace ma {
+namespace textray {
 
 // ==========================================================================
 // APPLICATION::IMPLEMENTATION STRUCTURE

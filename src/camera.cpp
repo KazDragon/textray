@@ -33,8 +33,8 @@ static void render_floor(
 
 static void render_walls(
     std::vector<terminalpp::string> &content,
-    ma::floorplan const& plan,
-    ma::vector2d const& position,
+    textray::floorplan const& plan,
+    textray::vector2d const& position,
     double heading,
     double fov)
 {
@@ -60,8 +60,8 @@ static void render_walls(
     // identify components of a unit vector in the direction of the camera
     // heading and a plane perpendicular to it on which the textels(!) are
     // rendered.
-    const ma::vector2d dir   = ma::vector2d::from_angle(heading);
-    const ma::vector2d right = ma::vector2d::from_angle(heading - M_PI/2);
+    const auto dir   = textray::vector2d::from_angle(heading);
+    const auto right = textray::vector2d::from_angle(heading - M_PI/2);
     
     // Calculate the linear scale of the vertical FoV based on the viewport's aspect ratio
     // (taking the textel aspect ratio into consideration as well).
@@ -72,7 +72,7 @@ static void render_walls(
     {
         // calculate (normalized) ray direction
         double camerax = 2 * (x + 0.5) / view_width - 1; // x-coordinate in camera space (range [-1,+1])
-        ma::vector2d ray = normalize(dir / tanHalfFov + right * camerax);
+        textray::vector2d ray = normalize(dir / tanHalfFov + right * camerax);
         
         auto mapX = int(position.x);
         auto mapY = int(position.y);
@@ -168,8 +168,8 @@ static void render_walls(
 static void render_camera_image(
     terminalpp::extent size,
     munin::image& img,
-    ma::floorplan const& plan,
-    ma::vector2d const& position,
+    textray::floorplan const& plan,
+    textray::vector2d const& position,
     double heading,
     double fov)
 {
@@ -181,7 +181,7 @@ static void render_camera_image(
     img.set_content(content);    
 }
 
-namespace ma {
+namespace textray {
 
 camera::camera(std::shared_ptr<floorplan> plan, vector2d position, double heading, double fov)
   : image_(std::make_shared<munin::image>()),
