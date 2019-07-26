@@ -13,8 +13,8 @@ class MuninAcceptanceConan(ConanFile):
     exports = "*"
     options = {"shared": [True, False], "withTests": [True, False]}
     default_options = {"shared": False, "withTests": False}
-    requires = ("serverpp/[>=0.0.2]@kazdragon/conan-public",
-                "telnetpp/[>=2.0.0]@kazdragon/conan-public",
+    requires = ("serverpp/[>=0.0.3]@kazdragon/conan-public",
+                "telnetpp/[>=2.0.1]@kazdragon/conan-public",
                 "terminalpp/[>=1.3.0]@kazdragon/conan-public",
                 "munin/[>=0.3.1]@kazdragon/conan-public",
                 "boost_program_options/[>=1.69]@bincrafters/stable",
