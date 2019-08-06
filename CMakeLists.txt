@@ -12,13 +12,15 @@ conan_basic_setup(TARGETS NO_OUTPUT_DIRS)
 
 set(CMAKE_CXX_STANDARD 14)
 
-add_executable(textray
-    src/application.cpp
-    src/camera.cpp
-    src/client.cpp
-    src/connection.cpp
-    src/main.cpp
-    src/ui.cpp
+add_executable(textray src/main.cpp)
+
+target_sources(textray
+    PRIVATE
+        src/application.cpp
+        src/camera.cpp
+        src/client.cpp
+        src/connection.cpp
+        src/ui.cpp
 )
 
 target_include_directories(textray
