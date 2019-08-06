@@ -1,13 +1,13 @@
 from conans import ConanFile, CMake, tools
 
 
-class MuninAcceptanceConan(ConanFile):
-    name = "munin-acceptance"
+class TextratConan(ConanFile):
+    name = "textray"
     version = "0.0.1"
     license = "MIT"
     author = "KazDragon"
-    url = "https://github.com/KazDragon/terminalpp"
-    description = "A test bed for Munin, implementing a text-based FPS view"
+    url = "https://github.com/KazDragon/textray"
+    description = "A Telnet server test bed for Munin, implementing a text-based FPS view"
     topics = ("terminal-emulators", "ansi-escape-codes")
     settings = "os", "compiler", "build_type", "arch"
     exports = "*"
@@ -36,5 +36,5 @@ class MuninAcceptanceConan(ConanFile):
         self.copy("*.a", dst="lib", keep_path=False)
 
     def package_info(self):
-        self.cpp_info.libs = ["munin-acceptance"]
+        self.cpp_info.libs = ["textray"]
 
