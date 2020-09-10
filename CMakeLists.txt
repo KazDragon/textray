@@ -33,7 +33,6 @@ target_link_libraries(textray
     CONAN_PKG::telnetpp
     CONAN_PKG::terminalpp
     CONAN_PKG::munin
-    CONAN_PKG::boost_program_options
-    CONAN_PKG::boost_format
+    CONAN_PKG::boost
 )
     
