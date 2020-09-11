@@ -6,7 +6,7 @@
 #include "vector2d.hpp"
 #include "ui.hpp"
 
-#include <terminalpp/ansi_terminal.hpp>
+#include <terminalpp/terminal.hpp>
 #include <terminalpp/canvas.hpp>
 #include <munin/window.hpp>
 
@@ -365,7 +365,7 @@ private:
     boost::asio::io_context &io_context_;
     boost::asio::io_context::strand strand_;
     std::function<void ()> shutdown_;
-    terminalpp::ansi_terminal terminal_;
+    terminalpp::terminal terminal_;
     terminalpp::canvas canvas_;
     
     std::shared_ptr<floorplan> floorplan_;
