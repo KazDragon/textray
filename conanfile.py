@@ -3,7 +3,6 @@ from conans import ConanFile, CMake, tools
 
 class TextratConan(ConanFile):
     name = "textray"
-    version = "0.0.1"
     license = "MIT"
     author = "KazDragon"
     url = "https://github.com/KazDragon/textray"
@@ -13,10 +12,10 @@ class TextratConan(ConanFile):
     exports = "*"
     options = {"shared": [True, False], "withTests": [True, False]}
     default_options = {"shared": False, "withTests": False}
-    requires = ("serverpp/[>=0.0.5]@kazdragon/conan-public",
-                "telnetpp/[>=2.1.0]@kazdragon/conan-public",
-                "terminalpp/[>=1.4.0]@kazdragon/conan-public",
-                "munin/[>=0.3.7]@kazdragon/conan-public",
+    requires = ("serverpp/[>=0.0.7]@kazdragon/conan-public",
+                "telnetpp/[>=2.1.2]@kazdragon/conan-public",
+                "terminalpp/[>=1.4.2]@kazdragon/conan-public",
+                "munin/[>=0.3.9]@kazdragon/conan-public",
                 "boost/[>=1.69]")
     generators = "cmake"
 

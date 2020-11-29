@@ -1,16 +1,51 @@
 cmake_minimum_required(VERSION 3.2 FATAL_ERROR)
-project(textray)
+project(textray VERSION 0.0.1)
 cmake_policy(VERSION 3.2)
 
 if (POLICY CMP0063)
     cmake_policy(SET CMP0063 NEW)
 endif()
 
-# Include the Conan recipe in order to get our dependencies
-include(${CMAKE_BINARY_DIR}/conanbuildinfo.cmake)
-conan_basic_setup(TARGETS NO_OUTPUT_DIRS)
+if (EXISTS ${CMAKE_BINARY_DIR}/conanbuildinfo.cmake)
+    message("Using Conan due to conanbuildinfo.cmake")
+    set(TEXTRAY_USE_CONAN ON)
+    include(${CMAKE_BINARY_DIR}/conanbuildinfo.cmake)
+    conan_basic_setup(TARGETS NO_OUTPUT_DIRS)
+endif()
 
 set(CMAKE_CXX_STANDARD 14)
+set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
+
+if (TEXTRAY_USE_CONAN)
+    set(TEXTRAY_LIBRARIES
+        CONAN_PKG::serverpp
+        CONAN_PKG::telnetpp
+        CONAN_PKG::terminalpp
+        CONAN_PKG::munin
+        CONAN_PKG::boost
+    )
+else()
+    find_package(Boost 1.69.0 REQUIRED COMPONENTS container program_options)
+    find_package(serverpp 0.0.7 REQUIRED)
+    find_package(telnetpp 2.1.2 REQUIRED)
+    find_package(terminalpp 1.4.2 REQUIRED)
+    find_package(munin 0.3.9 REQUIRED)
+    find_package(gsl-lite 0.34.0 EXACT REQUIRED)
+    find_package(fmt 5.3 REQUIRED)
+    find_package(nlohmann_json 3.3.0 REQUIRED)
+    find_package(ZLIB REQUIRED)
+    find_package(Threads REQUIRED)
+
+    set (TEXTRAY_LIBRARIES
+        serverpp
+        telnetpp
+        terminalpp
+        munin
+        Boost::boost
+        Boost::program_options
+        ${CMAKE_THREAD_LIBS_INIT}
+    )
+endif()
 
 add_executable(textray src/main.cpp)
 
@@ -27,12 +62,5 @@ target_include_directories(textray
     PRIVATE
         ${PROJECT_SOURCE_DIR}/include
 )
-    
-target_link_libraries(textray
-    CONAN_PKG::serverpp
-    CONAN_PKG::telnetpp
-    CONAN_PKG::terminalpp
-    CONAN_PKG::munin
-    CONAN_PKG::boost
-)
-    
+ 
+target_link_libraries(textray ${TEXTRAY_LIBRARIES})

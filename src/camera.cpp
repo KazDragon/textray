@@ -146,7 +146,7 @@ static void render_walls(
   
             // Calculate lowest and highest textel to fill in current stripe
             int drawStart = std::max( (int)round(view_height / 2.0 - lineHeight / 2), 0);
-            int drawEnd   = std::min( (int)round(view_height / 2.0 + lineHeight / 2), view_height - 1);
+            int drawEnd   = std::min( (int)round(view_height / 2.0 + lineHeight / 2), view_height);
         
             for (terminalpp::coordinate_type row = drawStart; row < drawEnd; ++row)
             {
