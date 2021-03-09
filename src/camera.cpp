@@ -9,11 +9,11 @@ static void render_ceiling(
     using namespace terminalpp::literals;
     static auto const ceiling_brush = "\\[7="_ets[0];
     
-    auto const max_ceiling_row = size.height / 2;
+    auto const max_ceiling_row = size.height_ / 2;
 
     for (int row = 0; row < max_ceiling_row; ++row)
     {
-        content.emplace_back(size.width, ceiling_brush);
+        content.emplace_back(size.width_, ceiling_brush);
     }
 }
 
@@ -24,10 +24,10 @@ static void render_floor(
     using namespace terminalpp::literals;
     static auto const floor_brush = "\\[4#"_ets[0];
     
-    auto const min_floor_row = size.height / 2;
-    for (int row = min_floor_row; row < size.height; ++row)
+    auto const min_floor_row = size.height_ / 2;
+    for (int row = min_floor_row; row < size.height_; ++row)
     {
-        content.emplace_back(size.width, floor_brush);
+        content.emplace_back(size.width_, floor_brush);
     }
 }
 
@@ -151,12 +151,12 @@ static void render_walls(
             for (terminalpp::coordinate_type row = drawStart; row < drawEnd; ++row)
             {
                 terminalpp::element brush('o');
-                brush.attribute_.foreground_colour_ = terminalpp::ansi::graphics::colour(
+                brush.attribute_.foreground_colour_ = terminalpp::graphics::colour(
                   plan[mapY][mapX].fill.glyph_.character_);
 
                 if (side == 0)
                 {
-                    brush.attribute_.polarity_ = terminalpp::ansi::graphics::polarity::negative;
+                    brush.attribute_.polarity_ = terminalpp::graphics::polarity::negative;
                 }
 
                 content[row][x] = brush;
