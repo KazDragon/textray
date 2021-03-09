@@ -127,10 +127,10 @@ public:
         window_.on_repaint_request();
     }
 
-    connection_state handle_data(serverpp::bytes data) override
+    void handle_tokens(terminalpp::tokens tokens)
     {
         boost::for_each(
-            terminal_.read(bytes_to_string(data)),
+            tokens,
             [this](auto const &token)
             {
                 detail::visit_lambdas(
@@ -140,6 +140,16 @@ public:
                         this->event(elem);
                     });
             });
+    }
+
+    connection_state handle_data(serverpp::bytes data) override
+    {
+        terminal_.read(
+            [this](terminalpp::tokens tokens)
+            {
+                handle_tokens(tokens);
+            })
+            >> data;
 
         return connection_state::main;
     }
@@ -328,7 +338,6 @@ private:
     static terminalpp::behaviour create_behaviour()
     {
         terminalpp::behaviour behaviour;
-        behaviour.can_use_eight_bit_control_codes = true;
         behaviour.supports_basic_mouse_tracking = true;
         behaviour.supports_window_title_bel = true;
         
@@ -354,10 +363,13 @@ private:
         bool b = true;
         if (repaint_requested_.compare_exchange_strong(b, false))
         {
-            std::string const &output = window_.repaint(canvas_, terminal_);
-            auto const &output_bytes = string_to_bytes(output);
-
-            connection_.write(output_bytes);
+            window_.repaint(
+                canvas_, 
+                terminal_,
+                [this](terminalpp::bytes data)
+                {
+                    connection_.write(data);
+                });
         }
     }
 

@@ -14,8 +14,8 @@ class TextratConan(ConanFile):
     default_options = {"shared": False, "withTests": False}
     requires = ("serverpp/[>=0.0.7]@kazdragon/conan-public",
                 "telnetpp/[>=2.1.2]@kazdragon/conan-public",
-                "terminalpp/[>=1.4.2]@kazdragon/conan-public",
-                "munin/[>=0.3.9]@kazdragon/conan-public",
+                "terminalpp/[>=2.0.1]@kazdragon/conan-public",
+                "munin/[>=0.3.10]@kazdragon/conan-public",
                 "boost/[>=1.69]")
     generators = "cmake"
 
