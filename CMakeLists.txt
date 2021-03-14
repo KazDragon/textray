@@ -26,10 +26,10 @@ if (TEXTRAY_USE_CONAN)
     )
 else()
     find_package(Boost 1.69.0 REQUIRED COMPONENTS container program_options)
-    find_package(serverpp 0.0.7 REQUIRED)
-    find_package(telnetpp 2.1.2 REQUIRED)
-    find_package(terminalpp 2.0.1 REQUIRED)
-    find_package(munin 0.3.10 REQUIRED)
+    find_package(serverpp 0.0.8 REQUIRED)
+    find_package(telnetpp 2.2.0 REQUIRED)
+    find_package(terminalpp 2.0.2 REQUIRED)
+    find_package(munin 0.3.11 REQUIRED)
     find_package(gsl-lite 0.34.0 EXACT REQUIRED)
     find_package(fmt 5.3 REQUIRED)
     find_package(nlohmann_json 3.3.0 REQUIRED)
@@ -37,10 +37,10 @@ else()
     find_package(Threads REQUIRED)
 
     set (TEXTRAY_LIBRARIES
-        serverpp
-        telnetpp
-        terminalpp
-        munin
+        KazDragon::serverpp
+        KazDragon::telnetpp
+        KazDragon::terminalpp
+        KazDragon::munin
         Boost::boost
         Boost::program_options
         ${CMAKE_THREAD_LIBS_INIT}
