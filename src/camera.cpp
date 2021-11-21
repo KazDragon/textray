@@ -75,6 +75,58 @@ static int lerp0(int high, int percentage)
     return (high * percentage) / 100;
 }
 
+// Top glyph with dots blanked for height (so a height of 3.1 would only have lower dots, whereas
+// 3.8 would have only high dots missing
+static terminalpp::glyph top_glyph(double const height)
+{
+    using namespace terminalpp::literals;
+
+    double const adjusted_height = 1 - (height - int(height));
+    return adjusted_height < 0.25 ? "\\U28C0"_ete.glyph_
+         : adjusted_height < 0.50 ? "\\U28E4"_ete.glyph_
+         : adjusted_height < 0.75 ? "\\U28F6"_ete.glyph_
+                                  : "\\U28FF"_ete.glyph_;
+}
+
+// The top ceiling glyph will be adjusted so that there is always
+// 3/4 of a character's height between the top of the wall and the
+// ceiling.
+static terminalpp::glyph top_ceiling_glyph(double const height)
+{
+    using namespace terminalpp::literals;
+
+    double const adjusted_height = 1 - (height - int(height));
+    return adjusted_height < 0.25 ? "\\U28FF"_ete.glyph_
+         : adjusted_height < 0.50 ? "\\U283F"_ete.glyph_
+         : adjusted_height < 0.75 ? "\\U281B"_ete.glyph_
+                                  : "\\U2809"_ete.glyph_;
+}
+
+// Likewise bottom glyphs miss dots from the bottom up.
+static terminalpp::glyph bottom_glyph(double const height)
+{
+    using namespace terminalpp::literals;
+
+    double const adjusted_height = height - int(height);
+    return adjusted_height < 0.25 ? "\\U2809"_ete.glyph_
+         : adjusted_height < 0.50 ? "\\U281B"_ete.glyph_
+         : adjusted_height < 0.75 ? "\\U283F"_ete.glyph_
+                                  : "\\U28FF"_ete.glyph_;
+}
+
+// Likewise bottom floor glyphs maintain 3/4 of a character's
+// distance at all times.
+static terminalpp::glyph bottom_floor_glyph(double const height)
+{
+    using namespace terminalpp::literals;
+
+    double const adjusted_height = height - int(height);
+    return adjusted_height < 0.25 ? "\\U28FF"_ete.glyph_
+         : adjusted_height < 0.50 ? "\\U28F6"_ete.glyph_
+         : adjusted_height < 0.75 ? "\\U28E4"_ete.glyph_
+                                  : "\\U28C0"_ete.glyph_;
+}
+
 static void render_ceiling(
     std::vector<terminalpp::string> &content,
     terminalpp::extent size)
@@ -229,13 +281,20 @@ static void render_walls(
             auto lineHeight = view_height * wall_height / perpWallDist / fovScaleY / textel_aspect;
   
             // Calculate lowest and highest textel to fill in current stripe
-            int drawStart = std::max( (int)round(view_height / 2.0 - lineHeight / 2), 0);
-            int drawEnd   = std::min( (int)round(view_height / 2.0 + lineHeight / 2), view_height);
+            double drawStart = std::max(view_height / 2.0 - lineHeight / 2.0, 0.0);
+            double drawEnd   = std::min(view_height / 2.0 + lineHeight / 2.0, double(view_height));
         
             using namespace terminalpp::literals;
-            static const auto cube_glyph = "\\U28FF"_ete.glyph_;
+            static auto const cube_glyph = "\\U28FF"_ete.glyph_;
+            auto const high_glyph = top_glyph(drawStart);
+            auto const low_glyph  = bottom_glyph(drawEnd);
 
-            for (terminalpp::coordinate_type row = drawStart; row < drawEnd; ++row)
+            if (int(drawStart) > 0)
+            {
+                content[int(drawStart) - 1][x].glyph_ = top_ceiling_glyph(drawStart);
+            }
+
+            for (terminalpp::coordinate_type row = int(drawStart); row < int(drawEnd); ++row)
             {
                 auto const colour = terminalpp::colour{terminalpp::low_colour{
                     terminalpp::graphics::colour(plan[mapY][mapX].fill.glyph_.character_)}};
@@ -246,9 +305,16 @@ static void render_walls(
                 auto const darkness_percentage = distance * percentage_factor;
 
                 auto const darkened_colour = darken_colour(colour, lerp0(90, darkness_percentage));
-                auto const brush  = terminalpp::element{cube_glyph, darkened_colour};
+                auto const brush  = terminalpp::element{
+                    (row == int(drawStart) ? high_glyph : row == (int(drawEnd) - 1) ? low_glyph : cube_glyph), 
+                    darkened_colour};
 
                 content[row][x] = brush;
+            }
+
+            if (int(drawEnd) < view_height)
+            {
+                content[int(drawEnd)][x].glyph_ = bottom_floor_glyph(drawEnd);
             }
         }
     }
