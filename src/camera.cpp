@@ -1,19 +1,97 @@
 #include "camera.hpp"
+#include <terminalpp/palette.hpp>
+#include <map>
 #include <math.h>
 #include <vector2d.hpp>
+
+static terminalpp::colour darken_high_colour(terminalpp::high_colour col, int percentage)
+{
+    auto const red_component = terminalpp::ansi::graphics::high_red_component(col.value_);
+    auto const green_component = terminalpp::ansi::graphics::high_green_component(col.value_);
+    auto const blue_component = terminalpp::ansi::graphics::high_blue_component(col.value_);
+
+    auto const darkened_red_component = terminalpp::byte((int(red_component) * (100 - percentage)) / 100);
+    auto const darkened_green_component = terminalpp::byte((int(green_component) * (100 - percentage)) / 100);
+    auto const darkened_blue_component = terminalpp::byte((int(blue_component) * (100 - percentage)) / 100);
+
+    return terminalpp::high_colour(
+        darkened_red_component,
+        darkened_green_component,
+        darkened_blue_component);
+}
+
+static terminalpp::colour darken_greyscale_colour(terminalpp::greyscale_colour col, int percentage)
+{
+    auto const greyscale_component = terminalpp::ansi::graphics::greyscale_component(col.shade_);
+    auto const darkened_greyscale_component = terminalpp::byte((int(greyscale_component) * (100 - percentage)) / 100);
+
+    return terminalpp::greyscale_colour{darkened_greyscale_component};
+}
+
+static terminalpp::colour darken_low_colour(terminalpp::low_colour col, int percentage)
+{  
+    if (col == terminalpp::graphics::colour::white)
+    {
+        return darken_greyscale_colour(terminalpp::greyscale_colour{23}, percentage);
+    }
+    else
+    {
+        static auto low_to_high_mapping = 
+            std::map<terminalpp::low_colour, terminalpp::high_colour> {
+                { terminalpp::graphics::colour::black,    terminalpp::high_colour{0, 0, 0}},
+                { terminalpp::graphics::colour::red,      terminalpp::high_colour{5, 0, 0}},
+                { terminalpp::graphics::colour::green,    terminalpp::high_colour{0, 5, 0}},
+                { terminalpp::graphics::colour::yellow,   terminalpp::high_colour{5, 5, 0}},
+                { terminalpp::graphics::colour::blue,     terminalpp::high_colour{0, 0, 5}},
+                { terminalpp::graphics::colour::magenta,  terminalpp::high_colour{5, 0, 5}},
+                { terminalpp::graphics::colour::cyan,     terminalpp::high_colour{0, 5, 5}},
+                { terminalpp::graphics::colour::default_, terminalpp::high_colour{0, 0, 0}}
+            };
+        
+        return darken_high_colour(low_to_high_mapping[col], percentage);
+    }
+}
+
+static terminalpp::colour darken_colour(terminalpp::colour col, int percentage)
+{
+    switch (col.type_)
+    {
+        case terminalpp::colour::type::low: 
+            return darken_low_colour(col.low_colour_, percentage);
+            break;
+
+        case terminalpp::colour::type::high: 
+            return darken_high_colour(col.high_colour_, percentage); 
+            break;
+
+        case terminalpp::colour::type::greyscale: 
+            return darken_greyscale_colour(col.greyscale_colour_, percentage); 
+            break;
+    }
+}
+
+static int lerp0(int high, int percentage)
+{
+    return (high * percentage) / 100;
+}
 
 static void render_ceiling(
     std::vector<terminalpp::string> &content,
     terminalpp::extent size)
 {
     using namespace terminalpp::literals;
-    static auto const ceiling_brush = "\\[7="_ets[0];
+    static auto const ceiling_glyph = "\\U28FF"_ete.glyph_;
+    auto base_colour = terminalpp::palette::grey93;
     
     auto const max_ceiling_row = size.height_ / 2;
+    auto const dropoff_per_segment = 100 / (max_ceiling_row - 1);
 
     for (int row = 0; row < max_ceiling_row; ++row)
     {
-        content.emplace_back(size.width_, ceiling_brush);
+        auto const dropoff = dropoff_per_segment * row;
+        auto const col = darken_colour(base_colour, lerp0(90, dropoff));
+        
+        content.emplace_back(size.width_, terminalpp::element{ceiling_glyph, col});
     }
 }
 
@@ -22,12 +100,18 @@ static void render_floor(
     terminalpp::extent size)
 {
     using namespace terminalpp::literals;
-    static auto const floor_brush = "\\[4#"_ets[0];
+    static auto const floor_glyph = "\\U28FF"_ete.glyph_;
+    auto base_colour = terminalpp::palette::blue100;
     
     auto const min_floor_row = size.height_ / 2;
+    auto const dropoff_per_segment = 100 / ((size.height_ - min_floor_row) - 1);
+
     for (int row = min_floor_row; row < size.height_; ++row)
     {
-        content.emplace_back(size.width_, floor_brush);
+        auto const dropoff = dropoff_per_segment * (row - min_floor_row);
+        auto const col = darken_colour(base_colour, 90 - lerp0(90, dropoff));
+
+        content.emplace_back(size.width_, terminalpp::element{floor_glyph, col});
     }
 }
 
@@ -38,8 +122,8 @@ static void render_walls(
     double heading,
     double fov)
 {
-    static const double TEXTEL_ASPECT = 2.0;  // textel_height / textel_width
-    static const double WALL_HEIGHT   = 1.0;  // height of walls, in world units
+    static constexpr double textel_aspect = 2.0;  // textel_height / textel_width
+    static constexpr double wall_height   = 1.0;  // height of walls, in world units
 
     // FoV has to be between 0 and 180 degrees (exclusive).
     assert(fov > 0.0001);
@@ -66,7 +150,7 @@ static void render_walls(
     // Calculate the linear scale of the vertical FoV based on the viewport's aspect ratio
     // (taking the textel aspect ratio into consideration as well).
     const double tanHalfFov = tan(fov / 2);
-    const double fovScaleY = tanHalfFov / view_width * view_height * TEXTEL_ASPECT;
+    const double fovScaleY = tanHalfFov / view_width * view_height * textel_aspect;
 
     for (terminalpp::coordinate_type x = 0; x < view_width; ++x)
     {
@@ -142,22 +226,27 @@ static void render_walls(
         {
             // Calculate height of line to draw on screen.
             // Correct for the textel aspect ratio to make sure the height is correct on the screen.
-            auto lineHeight = view_height * WALL_HEIGHT / perpWallDist / fovScaleY / TEXTEL_ASPECT;
+            auto lineHeight = view_height * wall_height / perpWallDist / fovScaleY / textel_aspect;
   
             // Calculate lowest and highest textel to fill in current stripe
             int drawStart = std::max( (int)round(view_height / 2.0 - lineHeight / 2), 0);
             int drawEnd   = std::min( (int)round(view_height / 2.0 + lineHeight / 2), view_height);
         
+            using namespace terminalpp::literals;
+            static const auto cube_glyph = "\\U28FF"_ete.glyph_;
+
             for (terminalpp::coordinate_type row = drawStart; row < drawEnd; ++row)
             {
-                terminalpp::element brush('o');
-                brush.attribute_.foreground_colour_ = terminalpp::graphics::colour(
-                  plan[mapY][mapX].fill.glyph_.character_);
+                auto const colour = terminalpp::colour{terminalpp::low_colour{
+                    terminalpp::graphics::colour(plan[mapY][mapX].fill.glyph_.character_)}};
 
-                if (side == 0)
-                {
-                    brush.attribute_.polarity_ = terminalpp::graphics::polarity::negative;
-                }
+                auto const darkest_distance = 5;
+                auto const percentage_factor = 100 / darkest_distance;
+                auto const distance = std::min(int(perpWallDist), darkest_distance);
+                auto const darkness_percentage = distance * percentage_factor;
+
+                auto const darkened_colour = darken_colour(colour, lerp0(90, darkness_percentage));
+                auto const brush  = terminalpp::element{cube_glyph, darkened_colour};
 
                 content[row][x] = brush;
             }
