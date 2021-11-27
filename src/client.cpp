@@ -118,6 +118,9 @@ public:
         window_(ui_),
         repaint_requested_(false)
     {
+        terminal_.write([this](terminalpp::bytes data) { connection_.write(data); }) 
+            << terminalpp::hide_cursor();
+
         window_.on_repaint_request.connect(
             [this]
             {
@@ -127,6 +130,12 @@ public:
         window_.on_repaint_request();
     }
 
+    ~main_state()
+    {
+        terminal_.write([this](terminalpp::bytes data) { connection_.write(data); }) 
+            << terminalpp::show_cursor();
+    }
+    
     void handle_tokens(terminalpp::tokens tokens)
     {
         boost::for_each(

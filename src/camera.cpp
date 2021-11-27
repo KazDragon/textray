@@ -4,31 +4,44 @@
 #include <math.h>
 #include <vector2d.hpp>
 
-static terminalpp::colour darken_high_colour(terminalpp::high_colour col, int percentage)
+static terminalpp::attribute darken_high_colour(terminalpp::high_colour col, double percentage)
 {
     auto const red_component = terminalpp::ansi::graphics::high_red_component(col.value_);
     auto const green_component = terminalpp::ansi::graphics::high_green_component(col.value_);
     auto const blue_component = terminalpp::ansi::graphics::high_blue_component(col.value_);
 
-    auto const darkened_red_component = terminalpp::byte((int(red_component) * (100 - percentage)) / 100);
-    auto const darkened_green_component = terminalpp::byte((int(green_component) * (100 - percentage)) / 100);
-    auto const darkened_blue_component = terminalpp::byte((int(blue_component) * (100 - percentage)) / 100);
+    auto const darkened_red_component   = (double(red_component) * (100 - percentage)) / 100;
+    auto const darkened_green_component = (double(green_component) * (100 - percentage)) / 100;
+    auto const darkened_blue_component  = (double(blue_component) * (100 - percentage)) / 100;
 
-    return terminalpp::high_colour(
+    return {terminalpp::high_colour(
         darkened_red_component,
         darkened_green_component,
-        darkened_blue_component);
+        darkened_blue_component)};
 }
 
-static terminalpp::colour darken_greyscale_colour(terminalpp::greyscale_colour col, int percentage)
+static terminalpp::attribute darken_greyscale_colour(terminalpp::greyscale_colour col, double percentage)
 {
     auto const greyscale_component = terminalpp::ansi::graphics::greyscale_component(col.shade_);
     auto const darkened_greyscale_component = terminalpp::byte((int(greyscale_component) * (100 - percentage)) / 100);
 
-    return terminalpp::greyscale_colour{darkened_greyscale_component};
+    return {terminalpp::greyscale_colour{darkened_greyscale_component}};
 }
 
-static terminalpp::colour darken_low_colour(terminalpp::low_colour col, int percentage)
+static terminalpp::attribute darken_true_colour(terminalpp::true_colour col, double percentage)
+{
+    auto const darkened_red_component = (double(col.red_) * (100 - percentage)) / 100;
+    auto const darkened_green_component = (double(col.green_) * (100 - percentage)) / 100;
+    auto const darkened_blue_component = (double(col.blue_) * (100 - percentage)) / 100;
+
+    return {terminalpp::true_colour{
+        terminalpp::byte(darkened_red_component),
+        terminalpp::byte(darkened_green_component),
+        terminalpp::byte(darkened_blue_component)
+    }};
+}
+
+static terminalpp::attribute darken_low_colour(terminalpp::low_colour col, double percentage)
 {  
     if (col == terminalpp::graphics::colour::white)
     {
@@ -37,22 +50,22 @@ static terminalpp::colour darken_low_colour(terminalpp::low_colour col, int perc
     else
     {
         static auto low_to_high_mapping = 
-            std::map<terminalpp::low_colour, terminalpp::high_colour> {
-                { terminalpp::graphics::colour::black,    terminalpp::high_colour{0, 0, 0}},
-                { terminalpp::graphics::colour::red,      terminalpp::high_colour{5, 0, 0}},
-                { terminalpp::graphics::colour::green,    terminalpp::high_colour{0, 5, 0}},
-                { terminalpp::graphics::colour::yellow,   terminalpp::high_colour{5, 5, 0}},
-                { terminalpp::graphics::colour::blue,     terminalpp::high_colour{0, 0, 5}},
-                { terminalpp::graphics::colour::magenta,  terminalpp::high_colour{5, 0, 5}},
-                { terminalpp::graphics::colour::cyan,     terminalpp::high_colour{0, 5, 5}},
-                { terminalpp::graphics::colour::default_, terminalpp::high_colour{0, 0, 0}}
+            std::map<terminalpp::low_colour, terminalpp::true_colour> {
+                { terminalpp::graphics::colour::black,    terminalpp::true_colour{0, 0, 0}},
+                { terminalpp::graphics::colour::red,      terminalpp::true_colour{0xB8, 0x25, 0x0F}},
+                { terminalpp::graphics::colour::green,    terminalpp::true_colour{0, 0xFF, 0}},
+                { terminalpp::graphics::colour::yellow,   terminalpp::true_colour{0xFF, 0xFF, 0}},
+                { terminalpp::graphics::colour::blue,     terminalpp::true_colour{0, 0, 0xFF}},
+                { terminalpp::graphics::colour::magenta,  terminalpp::true_colour{0xFF, 0, 0xFF}},
+                { terminalpp::graphics::colour::cyan,     terminalpp::true_colour{0, 0xFF, 0xFF}},
+                { terminalpp::graphics::colour::default_, terminalpp::true_colour{0, 0, 0}}
             };
         
-        return darken_high_colour(low_to_high_mapping[col], percentage);
+        return darken_true_colour(low_to_high_mapping[col], percentage);
     }
 }
 
-static terminalpp::colour darken_colour(terminalpp::colour col, int percentage)
+static terminalpp::attribute darken_colour(terminalpp::colour col, double percentage)
 {
     switch (col.type_)
     {
@@ -67,10 +80,14 @@ static terminalpp::colour darken_colour(terminalpp::colour col, int percentage)
         case terminalpp::colour::type::greyscale: 
             return darken_greyscale_colour(col.greyscale_colour_, percentage); 
             break;
+
+        case terminalpp::colour::type::true_:
+            return darken_true_colour(col.true_colour_, percentage);
+            break;
     }
 }
 
-static int lerp0(int high, int percentage)
+static double lerp0(int high, double percentage)
 {
     return (high * percentage) / 100;
 }
@@ -133,7 +150,7 @@ static void render_ceiling(
 {
     using namespace terminalpp::literals;
     static auto const ceiling_glyph = "\\U28FF"_ete.glyph_;
-    auto base_colour = terminalpp::palette::grey93;
+    auto base_colour = terminalpp::colour{terminalpp::true_colour{0xDE, 0xC9, 0xC5}};
     
     auto const max_ceiling_row = size.height_ / 2;
     auto const dropoff_per_segment = 100 / (max_ceiling_row - 1);
@@ -153,7 +170,7 @@ static void render_floor(
 {
     using namespace terminalpp::literals;
     static auto const floor_glyph = "\\U28FF"_ete.glyph_;
-    auto base_colour = terminalpp::palette::blue100;
+    auto base_colour = terminalpp::true_colour{0x18, 0x2B, 0x8C};
     
     auto const min_floor_row = size.height_ / 2;
     auto const dropoff_per_segment = 100 / ((size.height_ - min_floor_row) - 1);
@@ -299,9 +316,9 @@ static void render_walls(
                 auto const colour = terminalpp::colour{terminalpp::low_colour{
                     terminalpp::graphics::colour(plan[mapY][mapX].fill.glyph_.character_)}};
 
-                auto const darkest_distance = 5;
+                auto const darkest_distance = 7;
                 auto const percentage_factor = 100 / darkest_distance;
-                auto const distance = std::min(int(perpWallDist), darkest_distance);
+                auto const distance = std::min(wallDist, double(darkest_distance));
                 auto const darkness_percentage = distance * percentage_factor;
 
                 auto const darkened_colour = darken_colour(colour, lerp0(90, darkness_percentage));
@@ -310,6 +327,15 @@ static void render_walls(
                     darkened_colour};
 
                 content[row][x] = brush;
+
+                if (perpWallDist < 1.0)
+                {
+                    content[row][x].attribute_.intensity_ = terminalpp::graphics::intensity::bold;
+                }
+                else if (perpWallDist > 2.5)
+                {
+                    content[row][x].attribute_.intensity_ = terminalpp::graphics::intensity::faint;
+                }
             }
 
             if (int(drawEnd) < view_height)
