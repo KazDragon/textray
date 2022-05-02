@@ -5,4 +5,4 @@ Telnet++, Terminal++ and Munin.
 Implements a Telnet server that allows a connected client to navigate
 a text-based ray-casted 3D landscape.
 
-[![Screenshot of Terminal](img/cubes.png)]
+![Screenshot of Terminal](img/cubes.png)
