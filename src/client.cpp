@@ -190,9 +190,24 @@ private:
     // ======================================================================
     void move_direction(double angle)
     {
-        constexpr auto VELOCITY = 0.25;
-        position_ += vector2d::from_angle(angle) * VELOCITY;
-        ui_->move_camera_to(position_, heading_);
+        static constexpr auto velocity = 0.25;
+
+        auto const proposed_position = 
+            position_ + vector2d::from_angle(angle) * velocity;
+
+        bool const proposal_is_within_bounds = 
+            proposed_position.x >= 0 && proposed_position.x < (*floorplan_)[0].size()
+         && proposed_position.y >= 0 && proposed_position.y < (*floorplan_).size();
+
+        bool const proposal_is_in_valid_space =
+            proposal_is_within_bounds
+         && (*floorplan_)[proposed_position.y][proposed_position.x].fill.glyph_.character_ == 0;
+
+        if (proposal_is_in_valid_space)
+        {
+            position_ = proposed_position;
+            ui_->move_camera_to(position_, heading_);
+        }
     }
 
     // ======================================================================
