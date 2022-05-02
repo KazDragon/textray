@@ -108,7 +108,17 @@ public:
         io_context_(io_context),
         strand_(io_context),
         shutdown_(shutdown),
-        terminal_(main_state::create_behaviour()),
+        terminal_{
+            [this](terminalpp::tokens tokens)
+            {
+                handle_tokens(tokens);
+            },
+            [this](terminalpp::bytes data) 
+            { 
+                connection_.write(data); 
+            },
+            main_state::create_behaviour()
+        },
         canvas_({80, 24}),
         floorplan_(std::make_shared<floorplan>(level_map)),
         position_({3, 2}),
@@ -118,8 +128,7 @@ public:
         window_(ui_),
         repaint_requested_(false)
     {
-        terminal_.write([this](terminalpp::bytes data) { connection_.write(data); }) 
-            << terminalpp::hide_cursor();
+        terminal_ << terminalpp::hide_cursor();
 
         window_.on_repaint_request.connect(
             [this]
@@ -132,8 +141,7 @@ public:
 
     ~main_state()
     {
-        terminal_.write([this](terminalpp::bytes data) { connection_.write(data); }) 
-            << terminalpp::show_cursor();
+        terminal_ << terminalpp::show_cursor();
     }
     
     void handle_tokens(terminalpp::tokens tokens)
@@ -153,13 +161,7 @@ public:
 
     connection_state handle_data(serverpp::bytes data) override
     {
-        terminal_.read(
-            [this](terminalpp::tokens tokens)
-            {
-                handle_tokens(tokens);
-            })
-            >> data;
-
+        terminal_ >> data;
         return connection_state::main;
     }
 
@@ -372,13 +374,7 @@ private:
         bool b = true;
         if (repaint_requested_.compare_exchange_strong(b, false))
         {
-            window_.repaint(
-                canvas_, 
-                terminal_,
-                [this](terminalpp::bytes data)
-                {
-                    connection_.write(data);
-                });
+            window_.repaint(canvas_, terminal_);
         }
     }
 
