@@ -2,7 +2,6 @@
 #include "connection.hpp"
 #include "camera.hpp"
 #include "floorplan.hpp"
-#include "lambda_visitor.hpp"
 #include "vector2d.hpp"
 #include "ui.hpp"
 
@@ -125,7 +124,7 @@ public:
         heading_(to_radians(210)),
         fov_(90),
         ui_(std::make_shared<ui>(floorplan_, position_, heading_, to_radians(fov_))),
-        window_(ui_),
+        window_(terminal_, ui_),
         repaint_requested_(false)
     {
         terminal_ << terminalpp::hide_cursor();
@@ -150,12 +149,11 @@ public:
             tokens,
             [this](auto const &token)
             {
-                detail::visit_lambdas(
-                    token,
-                    [this](auto const &elem)
-                    {
-                        this->event(elem);
-                    });
+                std::visit(
+                    [this](auto const &elem) {
+                        event(elem);
+                    },
+                    token);
             });
     }
 
@@ -389,7 +387,7 @@ private:
         bool b = true;
         if (repaint_requested_.compare_exchange_strong(b, false))
         {
-            window_.repaint(canvas_, terminal_);
+            window_.repaint(canvas_);
         }
     }
 

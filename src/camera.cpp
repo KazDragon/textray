@@ -1,8 +1,10 @@
 #include "camera.hpp"
+#include "overloaded.hpp"
 #include <terminalpp/palette.hpp>
 #include <map>
 #include <math.h>
 #include <vector2d.hpp>
+#include <variant>
 
 static terminalpp::attribute darken_high_colour(terminalpp::high_colour col, double percentage)
 {
@@ -67,24 +69,20 @@ static terminalpp::attribute darken_low_colour(terminalpp::low_colour col, doubl
 
 static terminalpp::attribute darken_colour(terminalpp::colour col, double percentage)
 {
-    switch (col.type_)
-    {
-        case terminalpp::colour::type::low: 
-            return darken_low_colour(col.low_colour_, percentage);
-            break;
-
-        case terminalpp::colour::type::high: 
-            return darken_high_colour(col.high_colour_, percentage); 
-            break;
-
-        case terminalpp::colour::type::greyscale: 
-            return darken_greyscale_colour(col.greyscale_colour_, percentage); 
-            break;
-
-        case terminalpp::colour::type::true_:
-            return darken_true_colour(col.true_colour_, percentage);
-            break;
-    }
+    return std::visit(overloaded{
+        [percentage](terminalpp::low_colour const &col) {
+            return darken_low_colour(col, percentage);
+        },
+        [percentage](terminalpp::high_colour const &col) {
+            return darken_high_colour(col, percentage);
+        },
+        [percentage](terminalpp::greyscale_colour const &col) {
+            return darken_greyscale_colour(col, percentage);
+        },
+        [percentage](terminalpp::true_colour const &col) {
+            return darken_true_colour(col, percentage);
+        }},
+        col.value_);
 }
 
 static double lerp0(int high, double percentage)
