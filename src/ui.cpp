@@ -33,14 +33,14 @@ ui::ui(std::shared_ptr<floorplan> plan, vector2d position, double heading, doubl
         "\\<340\\>002Shutdown: P"_ets
     };
     
-    auto status_bar  = std::make_shared<munin::image>(status_text, fill);
-    auto status_quit = std::make_shared<munin::image>(quit_text, fill);
-    auto status_fill = std::make_shared<munin::filled_box>(fill);
-    auto status_line = std::make_shared<munin::container>();
-    status_line->set_layout(munin::make_compass_layout());
-    status_line->add_component(status_bar, munin::compass_layout::heading::west);
-    status_line->add_component(status_fill, munin::compass_layout::heading::centre);
-    status_line->add_component(status_quit, munin::compass_layout::heading::east);
+    auto status_bar  = munin::make_image(status_text, fill);
+    auto status_quit = munin::make_image(quit_text, fill);
+    auto status_fill = munin::make_fill(fill);
+    auto status_line = munin::view(
+        munin::make_compass_layout(),
+        status_bar, munin::compass_layout::heading::west,
+        status_fill, munin::compass_layout::heading::centre,
+        status_quit, munin::compass_layout::heading::east);
     
     set_layout(munin::make_compass_layout());
     add_component(pimpl_->camera_, munin::compass_layout::heading::centre);
