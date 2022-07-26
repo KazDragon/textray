@@ -2,7 +2,6 @@
 #include "connection.hpp"
 #include "camera.hpp"
 #include "floorplan.hpp"
-#include "lambda_visitor.hpp"
 #include "vector2d.hpp"
 #include "ui.hpp"
 
@@ -41,94 +40,53 @@ constexpr double to_radians(double angle_degrees)
     return angle_degrees * M_PI / 180;
 }
 
-enum class connection_state
+}
+
+// ==========================================================================
+// CLIENT IMPLEMENTATION STRUCTURE
+// ==========================================================================
+class client::impl
 {
-    init,
-    setup,
-    main,
-    dead
-};
-
-// ======================================================================
-// STATE STRUCTURE
-// ======================================================================
-struct state
-{
-    virtual ~state() = default;
-    virtual connection_state handle_data(serverpp::bytes data) = 0;
-    virtual connection_state terminal_type(std::string const &type) = 0;
-    virtual connection_state window_size_changed(
-        std::uint16_t width, std::uint16_t height) = 0;
-};
-
-// ======================================================================
-// SETUP STATE
-// ======================================================================
-struct setup_state final : state
-{
-public:
-    void on_discarded_data(
-        std::function<void (serverpp::bytes)> const &callback)
-    {
-        on_discarded_data_ = callback;
-    }
-
-    connection_state handle_data(serverpp::bytes data) override
-    {
-        on_discarded_data_(data);
-        return connection_state::setup;
-    }
-
-    connection_state terminal_type(std::string const &type) override
-    {
-        return connection_state::main;
-    }
-
-    connection_state window_size_changed(
-        std::uint16_t width, std::uint16_t height) override
-    {
-        return connection_state::setup;
-    }
-
-private:
-    std::function<void (serverpp::bytes)> on_discarded_data_;
-};
-
-// ======================================================================
-// MAIN STATE
-// ======================================================================
-struct main_state final : state
-{
-public:
-    main_state(
-        connection &cnx, 
-        boost::asio::io_context &io_context, 
+public :
+    // ======================================================================
+    // CONSTRUCTOR
+    // ======================================================================
+    impl(
+        connection &&cnx, 
+        boost::asio::io_context &io_context,
+        std::function<void ()> const &connection_died,
         std::function<void ()> const &shutdown)
-      : connection_(cnx),
-        io_context_(io_context),
+      : connection_{std::move(cnx)},
+        channel_{connection_},
+        terminal_{channel_, create_behaviour()},
         strand_(io_context),
+        connection_died_(connection_died),
         shutdown_(shutdown),
-        terminal_{
-            [this](terminalpp::tokens tokens)
-            {
-                handle_tokens(tokens);
-            },
-            [this](terminalpp::bytes data) 
-            { 
-                connection_.write(data); 
-            },
-            main_state::create_behaviour()
-        },
         canvas_({80, 24}),
         floorplan_(std::make_shared<floorplan>(level_map)),
         position_({3, 2}),
         heading_(to_radians(210)),
         fov_(90),
         ui_(std::make_shared<ui>(floorplan_, position_, heading_, to_radians(fov_))),
-        window_(ui_),
+        window_(terminal_, ui_),
         repaint_requested_(false)
     {
         terminal_ << terminalpp::hide_cursor();
+
+        connection_.async_get_terminal_type(
+            [](std::string const &terminal_type)
+            {
+                std::cout << "connection from terminal: " 
+                          << terminal_type << "\n";
+            });
+
+        connection_.on_window_size_changed(
+            [&](std::uint16_t width, std::uint16_t height)
+            {
+                window_width_ = width;
+                window_height_ = height;
+                window_size_changed(width, height);
+            });
 
         window_.on_repaint_request.connect(
             [this]
@@ -137,41 +95,50 @@ public:
                 strand_.post([this]{on_repaint();});
             });
         window_.on_repaint_request();
+
+        schedule_next_read();
     }
 
-    ~main_state()
+    ~impl()
     {
         terminal_ << terminalpp::show_cursor();
     }
     
-    void handle_tokens(terminalpp::tokens tokens)
+    void close()
     {
-        boost::for_each(
-            tokens,
-            [this](auto const &token)
+        connection_.close();
+    }
+
+private:
+    // ======================================================================
+    // SCHEDULE_NEXT_READ
+    // ======================================================================
+    void schedule_next_read()
+    {
+        terminal_.async_read(
+            [this](terminalpp::tokens data)
             {
-                detail::visit_lambdas(
-                    token,
-                    [this](auto const &elem)
-                    {
-                        this->event(elem);
-                    });
+                for (auto const &token : data)
+                {
+                    std::visit(
+                        [this](auto const &ev)
+                        {
+                            event(ev);
+                        },
+                        token);
+                }
+
+                if (terminal_.is_alive())
+                {
+                    schedule_next_read();
+                }
             });
     }
 
-    connection_state handle_data(serverpp::bytes data) override
-    {
-        terminal_ >> data;
-        return connection_state::main;
-    }
-
-    connection_state terminal_type(std::string const &type) override
-    {
-        return connection_state::main;
-    }
-
-    connection_state window_size_changed(
-        std::uint16_t width, std::uint16_t height) override
+    // ======================================================================
+    // WINDOW_SIZE_CHANGED
+    // ======================================================================
+    void window_size_changed(std::uint16_t width, std::uint16_t height)
     {
         if (canvas_.size() != terminalpp::extent{width, height})
         {
@@ -180,11 +147,8 @@ public:
         }
             
         window_.on_repaint_request();
-
-        return connection_state::main;
     }
 
-private:
     // ======================================================================
     // MOVE_DIRECTION
     // ======================================================================
@@ -310,20 +274,20 @@ private:
     {
         static struct {
             terminalpp::vk key;
-            void (main_state::*handle)();
+            void (impl::*handle)();
         } const handlers[] =
         {
-            { terminalpp::vk::lowercase_q, &main_state::rotate_left   },
-            { terminalpp::vk::lowercase_e, &main_state::rotate_right  },
-            { terminalpp::vk::lowercase_w, &main_state::move_forward  },
-            { terminalpp::vk::lowercase_s, &main_state::move_backward },
-            { terminalpp::vk::lowercase_a, &main_state::move_left     },
-            { terminalpp::vk::lowercase_d, &main_state::move_right    },
-            { terminalpp::vk::lowercase_z, &main_state::zoom_in       },
-            { terminalpp::vk::lowercase_x, &main_state::zoom_out      },
-            { terminalpp::vk::lowercase_c, &main_state::reset_zoom    },
-            { terminalpp::vk::uppercase_q, &main_state::quit          },
-            { terminalpp::vk::uppercase_p, &main_state::shutdown      },
+            { terminalpp::vk::lowercase_q, &impl::rotate_left   },
+            { terminalpp::vk::lowercase_e, &impl::rotate_right  },
+            { terminalpp::vk::lowercase_w, &impl::move_forward  },
+            { terminalpp::vk::lowercase_s, &impl::move_backward },
+            { terminalpp::vk::lowercase_a, &impl::move_left     },
+            { terminalpp::vk::lowercase_d, &impl::move_right    },
+            { terminalpp::vk::lowercase_z, &impl::zoom_in       },
+            { terminalpp::vk::lowercase_x, &impl::zoom_out      },
+            { terminalpp::vk::lowercase_c, &impl::reset_zoom    },
+            { terminalpp::vk::uppercase_q, &impl::quit          },
+            { terminalpp::vk::uppercase_p, &impl::shutdown      },
         };
         
         auto handler = boost::find_if(
@@ -389,14 +353,57 @@ private:
         bool b = true;
         if (repaint_requested_.compare_exchange_strong(b, false))
         {
-            window_.repaint(canvas_, terminal_);
+            window_.repaint(canvas_);
         }
     }
 
-    connection &connection_;
-    boost::asio::io_context &io_context_;
+    class connection_channel
+    {
+    public:
+        connection_channel(connection &cnx)
+          : connection_(cnx)
+        {
+        }
+
+        void async_read(std::function<void (serverpp::bytes)> const &callback)
+        {
+            connection_.async_read(
+                [this](serverpp::bytes data) {
+                    cache_.append(data.begin(), data.end());
+                },
+                [=]()
+                {
+                    serverpp::byte_storage callback_data;
+                    std::swap(cache_, callback_data);
+                    callback(callback_data);
+                });
+        }
+
+        void write(serverpp::bytes data)
+        {
+            connection_.write(data);
+        }
+
+        bool is_alive()
+        {
+            return connection_.is_alive();
+        }
+
+        void close()
+        {
+            connection_.close();
+        }
+
+    private:
+        connection &connection_;
+        serverpp::byte_storage cache_;
+    };
+
+    connection connection_;
+    connection_channel channel_;
     boost::asio::io_context::strand strand_;
     std::function<void ()> shutdown_;
+    std::function<void ()> connection_died_;
     terminalpp::terminal terminal_;
     terminalpp::canvas canvas_;
     
@@ -405,187 +412,13 @@ private:
     double heading_;
     double fov_;
 
+    std::uint16_t window_width_{80};
+    std::uint16_t window_height_{24};
+
     std::shared_ptr<ui> ui_;
     munin::window window_;
 
     std::atomic<bool> repaint_requested_;
-};
-
-// ======================================================================
-// DEAD STATE
-// ======================================================================
-struct dead_state final : state
-{
-    connection_state handle_data(serverpp::bytes data) override
-    {
-        return connection_state::dead;
-    }
-
-    connection_state terminal_type(std::string const &type) override
-    {
-        return connection_state::dead;
-    }
-
-    connection_state window_size_changed(
-        std::uint16_t width, std::uint16_t height) override
-    {
-        return connection_state::dead;
-    }
-};
-
-}
-
-// ==========================================================================
-// CLIENT IMPLEMENTATION STRUCTURE
-// ==========================================================================
-class client::impl
-{
-public :
-    // ======================================================================
-    // CONSTRUCTOR
-    // ======================================================================
-    impl(
-        connection &&cnx, 
-        boost::asio::io_context &io_context,
-        std::function<void ()> const &connection_died,
-        std::function<void ()> const &shutdown)
-      : connection_(std::move(cnx)),
-        io_context_(io_context),
-        connection_died_(connection_died),
-        shutdown_(shutdown)
-    {
-        connection_.async_get_terminal_type(
-            [&](std::string const &type)
-            {
-                enter_state(state_->terminal_type(type));
-            });
-
-        connection_.on_window_size_changed(
-            [&](std::uint16_t width, std::uint16_t height)
-            {
-                window_width_ = width;
-                window_height_ = height;
-                enter_state(state_->window_size_changed(width, height));
-            });
-
-        enter_state(connection_state::setup);
-        schedule_next_read();
-    }
-
-    // ======================================================================
-    // CLOSE
-    // ======================================================================
-    void close()
-    {
-        connection_.close();
-    }
-
-private :
-    // ======================================================================
-    // ENTER_SETUP_STATE
-    // ======================================================================
-    void enter_setup_state()
-    {
-        auto new_state = boost::make_unique<setup_state>();
-        new_state->on_discarded_data(
-            [this](serverpp::bytes data)
-            {
-                discarded_data_.insert(
-                    discarded_data_.end(),
-                    data.begin(),
-                    data.end());
-            });
-
-        state_ = std::move(new_state);
-    }
-
-    // ======================================================================
-    // ENTER_MAIN_STATE
-    // ======================================================================
-    void enter_main_state()
-    {
-        state_ = boost::make_unique<main_state>(
-            std::ref(connection_), io_context_, shutdown_);
-
-        serverpp::byte_storage discarded_data;
-        discarded_data_.swap(discarded_data);
-
-        enter_state(state_->handle_data(discarded_data));
-        enter_state(state_->window_size_changed(window_width_, window_height_));
-    }
-
-    // ======================================================================
-    // ENTER_DEAD_STATE
-    // ======================================================================
-    void enter_dead_state()
-    {
-        state_ = boost::make_unique<dead_state>();
-        connection_died_();
-    }
-
-    // ======================================================================
-    // ENTER_STATE
-    // ======================================================================
-    void enter_state(connection_state new_state)
-    {
-        auto old_state = connection_state_;
-        connection_state_ = new_state;
-
-        if (new_state != old_state)
-        {
-            switch (new_state)
-            {
-                case connection_state::setup:
-                    enter_setup_state();
-                    break;
-
-                case connection_state::main:
-                    enter_main_state();
-                    break;
-
-                case connection_state::dead:
-                    enter_dead_state();
-                    return;
-            }
-        }
-    }
-
-    // ======================================================================
-    // SCHEDULE_NEXT_READ
-    // ======================================================================
-    void schedule_next_read()
-    {
-        connection_.async_read(
-            [this](serverpp::bytes data)
-            {
-                enter_state(state_->handle_data(data));
-            },
-            [this]()
-            {
-                if (connection_.is_alive())
-                {
-                    schedule_next_read();
-                }
-                else
-                {
-                    enter_state(connection_state::dead);
-                }
-            });
-    }
-
-    connection connection_;
-    boost::asio::io_context &io_context_;
-
-    std::function<void ()> connection_died_;
-    std::function<void ()> shutdown_;
-
-    connection_state connection_state_{connection_state::init};
-    std::unique_ptr<state> state_;
-
-    std::uint16_t window_width_{80};
-    std::uint16_t window_height_{24};
-
-    serverpp::byte_storage discarded_data_;
 };
 
 // ==========================================================================

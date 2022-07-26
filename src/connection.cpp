@@ -24,33 +24,33 @@ struct connection::impl
       : socket_(std::move(socket))
     {
         telnet_naws_client_.on_window_size_changed.connect(
-            [this](auto &&width, auto &&height, auto &&continuation)
+            [this](auto &&width, auto &&height)
             {
                 this->on_window_size_changed(width, height);
             });
 
         telnet_terminal_type_client_.on_terminal_type.connect(
-            [this](auto &&type, auto &&continuation)
+            [this](auto &&type)
             {
                 std::string user_type(type.begin(), type.end());
                 this->on_terminal_type_detected(user_type);
             });
 
         telnet_terminal_type_client_.on_state_changed.connect(
-            [this](auto &&continuation)
+            [this]()
             {
                 if (telnet_terminal_type_client_.active())
                 {
-                    telnet_terminal_type_client_.request_terminal_type(continuation);
+                    telnet_terminal_type_client_.request_terminal_type();
                 }
             });
 
         telnet_mccp_server_.on_state_changed.connect(
-            [this](auto &&continuation)
+            [this]()
             {
                 if (telnet_mccp_server_.active())
                 {
-                    telnet_mccp_server_.start_compression(continuation);
+                    telnet_mccp_server_.start_compression();
                 }
             });
 
@@ -61,17 +61,11 @@ struct connection::impl
         telnet_session_.install(telnet_mccp_server_);
         
         // Send the required activations.
-        auto const &write_continuation = 
-            [this](telnetpp::element const &elem)
-            {
-                this->write(elem);
-            };
-
-        telnet_echo_server_.activate(write_continuation);
-        telnet_suppress_ga_server_.activate(write_continuation);
-        telnet_naws_client_.activate(write_continuation);
-        telnet_terminal_type_client_.activate(write_continuation);
-        telnet_mccp_server_.activate(write_continuation);
+        telnet_echo_server_.activate();
+        telnet_suppress_ga_server_.activate();
+        telnet_naws_client_.activate();
+        telnet_terminal_type_client_.activate();
+        telnet_mccp_server_.activate();
     }
 
     // ======================================================================
@@ -91,29 +85,11 @@ struct connection::impl
     }
 
     // ======================================================================
-    // RAW_WRITE
-    // ======================================================================
-    void raw_write(telnetpp::bytes data)
-    {
-        telnet_mccp_compressor_(
-            data,
-            [this](telnetpp::bytes compressed_data, bool)
-            {
-                this->socket_.write(compressed_data);
-            });
-    }
-    
-    // ======================================================================
     // WRITE
     // ======================================================================
     void write(telnetpp::element const &data)
     {
-        telnet_session_.send(
-            data, 
-            [this](telnetpp::bytes data)
-            {
-                this->raw_write(data);
-            });
+        telnet_session_.write(data);
     }
 
     // ======================================================================
@@ -123,21 +99,17 @@ struct connection::impl
         std::function<void (serverpp::bytes)> const &data_continuation,
         std::function<void ()> const &read_complete_continuation)
     {
-        socket_.async_read(
-            [=](serverpp::bytes data)
+        telnet_session_.async_read(
+            [=](telnetpp::bytes data)
             {
-                telnet_session_.receive(
-                    data, 
-                    [=](telnetpp::bytes data, auto &&send)
-                    {
-                        data_continuation(data);
-                    },
-                    [=](telnetpp::bytes data)
-                    {
-                        this->raw_write(data);
-                    });
-
-                read_complete_continuation();
+                if (data.empty())
+                {
+                    read_complete_continuation();
+                }
+                else
+                {
+                    data_continuation(data);
+                }
             });
     }
 
@@ -176,13 +148,13 @@ struct connection::impl
 
     serverpp::tcp_socket socket_;
 
-    telnetpp::session                                    telnet_session_;
-    telnetpp::options::echo::server                      telnet_echo_server_;
-    telnetpp::options::suppress_ga::server               telnet_suppress_ga_server_;
+    telnetpp::session                                    telnet_session_{socket_};
+    telnetpp::options::echo::server                      telnet_echo_server_{telnet_session_};
+    telnetpp::options::suppress_ga::server               telnet_suppress_ga_server_{telnet_session_};
     telnetpp::options::mccp::zlib::compressor            telnet_mccp_compressor_;
-    telnetpp::options::mccp::server                      telnet_mccp_server_{telnet_mccp_compressor_};
-    telnetpp::options::naws::client                      telnet_naws_client_;
-    telnetpp::options::terminal_type::client             telnet_terminal_type_client_;
+    telnetpp::options::mccp::server                      telnet_mccp_server_{telnet_session_, telnet_mccp_compressor_};
+    telnetpp::options::naws::client                      telnet_naws_client_{telnet_session_};
+    telnetpp::options::terminal_type::client             telnet_terminal_type_client_{telnet_session_};
     
     std::function<void (std::uint16_t, std::uint16_t)>   on_window_size_changed_;
 
