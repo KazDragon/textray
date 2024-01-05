@@ -1,6 +1,5 @@
 #pragma once
 
-#include "core.hpp"
 #include <cmath>
 
 namespace textray {
@@ -14,67 +13,64 @@ namespace textray {
 //* =========================================================================
 struct vector2d
 {
-    //* =====================================================================
-    /// \brief Default Constructor
-    /// \par
-    /// Constructs a vector2d, leaving the values uninitialised.
-    //* =====================================================================
-    constexpr vector2d()
-      : x{},
-        y{}
-    {
-    }
+  //* =====================================================================
+  /// \brief Default Constructor
+  /// \par
+  /// Constructs a vector2d, leaving the values uninitialized.
+  //* =====================================================================
+  constexpr vector2d() : x{}, y{}
+  {
+  }
 
-    //* =====================================================================
-    /// \brief Constructor
-    /// \par
-    /// Constructs a vector2d from a passed in x co-ordinate and a passed in
-    /// y co-ordinate.
-    //* =====================================================================
-    constexpr vector2d(double x_coordinate, double y_coordinate)
-      : x(x_coordinate),
-        y(y_coordinate)
-    {
-    }
+  //* =====================================================================
+  /// \brief Constructor
+  /// \par
+  /// Constructs a vector2d from a passed in x co-ordinate and a passed in
+  /// y co-ordinate.
+  //* =====================================================================
+  constexpr vector2d(double x_coordinate, double y_coordinate)
+    : x(x_coordinate), y(y_coordinate)
+  {
+  }
 
-    //* =====================================================================
-    /// \brief Addition
-    //* =====================================================================
-    constexpr vector2d &operator+=(vector2d const &rhs)
-    {
-        x += rhs.x;
-        y += rhs.y;
-        return *this;
-    }
+  //* =====================================================================
+  /// \brief Addition
+  //* =====================================================================
+  constexpr vector2d &operator+=(vector2d const &rhs)
+  {
+    x += rhs.x;
+    y += rhs.y;
+    return *this;
+  }
 
-    //* =====================================================================
-    /// \brief Subtraction
-    //* =====================================================================
-    constexpr vector2d &operator-=(vector2d const &rhs)
-    {
-        x -= rhs.x;
-        y -= rhs.y;
-        return *this;
-    }
+  //* =====================================================================
+  /// \brief Subtraction
+  //* =====================================================================
+  constexpr vector2d &operator-=(vector2d const &rhs)
+  {
+    x -= rhs.x;
+    y -= rhs.y;
+    return *this;
+  }
 
-    //* ==========================================================================
-    /// \brief Length
-    //* ==========================================================================
-    double length() const
-    {
-        return std::sqrt(x * x + y * y);
-    }
+  //* ==========================================================================
+  /// \brief Length
+  //* ==========================================================================
+  [[nodiscard]] double length() const
+  {
+    return std::sqrt(x * x + y * y);
+  }
 
-    //* ==========================================================================
-    /// \brief Construct from angle, in radians
-    //* ==========================================================================
-    static vector2d from_angle(double angle)
-    {
-        return {std::cos(angle), std::sin(angle)};
-    }
+  //* ==========================================================================
+  /// \brief Construct from angle, in radians
+  //* ==========================================================================
+  static vector2d from_angle(double angle)
+  {
+    return {std::cos(angle), std::sin(angle)};
+  }
 
-    double x;
-    double y;
+  double x;
+  double y;
 };
 
 // ==========================================================================
@@ -82,7 +78,7 @@ struct vector2d
 // ==========================================================================
 constexpr bool operator==(vector2d const &lhs, vector2d const &rhs)
 {
-    return lhs.x == rhs.x && lhs.y == rhs.y;
+  return lhs.x == rhs.x && lhs.y == rhs.y;
 }
 
 // ==========================================================================
@@ -90,7 +86,7 @@ constexpr bool operator==(vector2d const &lhs, vector2d const &rhs)
 // ==========================================================================
 constexpr bool operator!=(vector2d const &lhs, vector2d const &rhs)
 {
-    return !(lhs == rhs);
+  return !(lhs == rhs);
 }
 
 // ==========================================================================
@@ -98,7 +94,7 @@ constexpr bool operator!=(vector2d const &lhs, vector2d const &rhs)
 // ==========================================================================
 constexpr vector2d operator+(vector2d lhs, vector2d const &rhs)
 {
-    return lhs += rhs;
+  return lhs += rhs;
 }
 
 // ==========================================================================
@@ -106,7 +102,7 @@ constexpr vector2d operator+(vector2d lhs, vector2d const &rhs)
 // ==========================================================================
 constexpr vector2d operator-(vector2d lhs, vector2d const &rhs)
 {
-    return lhs -= rhs;
+  return lhs -= rhs;
 }
 
 // ==========================================================================
@@ -114,7 +110,7 @@ constexpr vector2d operator-(vector2d lhs, vector2d const &rhs)
 // ==========================================================================
 constexpr vector2d operator*(double lhs, vector2d const &rhs)
 {
-    return {lhs * rhs.x, lhs * rhs.y};
+  return {lhs * rhs.x, lhs * rhs.y};
 }
 
 // ==========================================================================
@@ -122,7 +118,7 @@ constexpr vector2d operator*(double lhs, vector2d const &rhs)
 // ==========================================================================
 constexpr vector2d operator*(vector2d const &lhs, double rhs)
 {
-    return {lhs.x * rhs, lhs.y * rhs};
+  return {lhs.x * rhs, lhs.y * rhs};
 }
 
 // ==========================================================================
@@ -130,23 +126,23 @@ constexpr vector2d operator*(vector2d const &lhs, double rhs)
 // ==========================================================================
 constexpr vector2d operator/(vector2d const &lhs, double rhs)
 {
-    return {lhs.x / rhs, lhs.y / rhs};
+  return {lhs.x / rhs, lhs.y / rhs};
 }
 
 // ==========================================================================
 // dot(vector2d,vector2d)
 // ==========================================================================
-constexpr double dot(vector2d const& lhs, vector2d const &rhs)
+constexpr double dot(vector2d const &lhs, vector2d const &rhs)
 {
-    return lhs.x * rhs.x + lhs.y * rhs.y;
+  return lhs.x * rhs.x + lhs.y * rhs.y;
 }
 
 // ==========================================================================
 // normalize(vector2d)
 // ==========================================================================
-inline vector2d normalize(vector2d const& v)
+inline vector2d normalize(vector2d const &v)
 {
-    return v / v.length();
+  return v / v.length();
 }
 
-}
+}  // namespace textray

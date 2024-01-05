@@ -4,61 +4,68 @@
 #include <munin/filled_box.hpp>
 #include <munin/image.hpp>
 #include <munin/view.hpp>
+#include <utility>
 
 namespace textray {
- 
+
 struct ui::impl
 {
-    impl(std::shared_ptr<floorplan> plan, vector2d position, double heading, double fov)
-      : camera_(std::make_shared<camera>(plan, position, heading, fov))
-    {
-    }
-    
-    std::shared_ptr<camera> camera_;
+  impl(
+      std::shared_ptr<floorplan> plan,
+      vector2d position,
+      double heading,
+      double fov)
+    : camera_(std::make_shared<camera>(plan, position, heading, fov))
+  {
+  }
+
+  std::shared_ptr<camera> camera_;  // NOLINT
 };
 
-ui::ui(std::shared_ptr<floorplan> plan, vector2d position, double heading, double fov)
-  : pimpl_(new impl(plan, position, heading, fov))
+ui::ui(
+    std::shared_ptr<floorplan> plan,
+    vector2d position,
+    double heading,
+    double fov)
+  : pimpl_(new impl(std::move(plan), position, heading, fov))
 {
-    using namespace terminalpp::literals;
-    auto const status_text = std::vector<terminalpp::string> {
-        "\\<340\\>002Movement: asdw.  Rotation: qe"_ets,
-        "\\<340\\>002Zoom: zx. Reset zoom: c"_ets
-    };
-    
-    auto const fill = "\\>002 "_ets[0];
+  using namespace terminalpp::literals;  // NOLINT
+  auto const status_text = std::vector<terminalpp::string>{
+      R"(\<340\>002Movement: asdw.  Rotation: qe)"_ets,
+      R"(\<340\>002Zoom: zx. Reset zoom: c)"_ets};
 
-    auto const quit_text = std::vector<terminalpp::string> {
-        "\\<340\\>002    Quit: Q"_ets,
-        "\\<340\\>002Shutdown: P"_ets
-    };
-    
-    auto status_bar  = munin::make_image(status_text, fill);
-    auto status_quit = munin::make_image(quit_text, fill);
-    auto status_fill = munin::make_fill(fill);
-    auto status_line = munin::view(
-        munin::make_compass_layout(),
-        status_bar, munin::compass_layout::heading::west,
-        status_fill, munin::compass_layout::heading::centre,
-        status_quit, munin::compass_layout::heading::east);
-    
-    set_layout(munin::make_compass_layout());
-    add_component(pimpl_->camera_, munin::compass_layout::heading::centre);
-    add_component(status_line, munin::compass_layout::heading::south);
+  auto const fill = R"(\>002 )"_ete;
+
+  auto const quit_text = std::vector<terminalpp::string>{
+      R"(\<340\>002    Quit: Q)"_ets, R"(\<340\>002Shutdown: P)"_ets};
+
+  auto status_bar = munin::make_image(status_text, fill);
+  auto status_quit = munin::make_image(quit_text, fill);
+  auto status_fill = munin::make_fill(fill);
+  auto status_line = munin::view(
+      munin::make_compass_layout(),
+      status_bar,
+      munin::compass_layout::heading::west,
+      status_fill,
+      munin::compass_layout::heading::centre,
+      status_quit,
+      munin::compass_layout::heading::east);
+
+  set_layout(munin::make_compass_layout());
+  add_component(pimpl_->camera_, munin::compass_layout::heading::centre);
+  add_component(status_line, munin::compass_layout::heading::south);
 }
 
-ui::~ui()
-{
-}
-    
+ui::~ui() = default;
+
 void ui::move_camera_to(vector2d const &position, double heading)
 {
-    pimpl_->camera_->move_to(position, heading);
+  pimpl_->camera_->move_to(position, heading);
 }
 
 void ui::set_camera_fov(double fov)
 {
-    pimpl_->camera_->set_fov(fov);
+  pimpl_->camera_->set_fov(fov);
 }
 
-}
+}  // namespace textray

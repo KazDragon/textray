@@ -1,6 +1,5 @@
-cmake_minimum_required(VERSION 3.2 FATAL_ERROR)
+cmake_minimum_required(VERSION 3.12 FATAL_ERROR)
 project(textray VERSION 0.0.1)
-cmake_policy(VERSION 3.2)
 
 if (POLICY CMP0063)
     cmake_policy(SET CMP0063 NEW)

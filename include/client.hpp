@@ -7,32 +7,31 @@ namespace textray {
 
 class connection;
 
-class client
+class client  // NOLINT
 {
-public :
-    //* =====================================================================
-    /// \brief Constructor
-    //* =====================================================================
-    explicit client(
-        connection &&cnx, 
-        boost::asio::io_context &io_context,
-        std::function<void (client const&)> const &connection_died,
-        std::function<void ()> const &shutdown);
+ public:
+  //* =====================================================================
+  /// \brief Constructor
+  //* =====================================================================
+  explicit client(
+      connection &&cnx,
+      boost::asio::io_context &io_context,
+      std::function<void(client const &)> const &connection_died,
+      std::function<void()> const &shutdown);
 
-    //* =====================================================================
-    /// \brief Destructor
-    //* =====================================================================
-    ~client();
+  //* =====================================================================
+  /// \brief Destructor
+  //* =====================================================================
+  ~client();
 
-    //* =====================================================================
-    /// \brief Closes the connection.
-    //* =====================================================================
-    void close();
+  //* =====================================================================
+  /// \brief Closes the connection.
+  //* =====================================================================
+  void close();
 
-private :
-    class impl;
-    std::unique_ptr<impl> pimpl_;
+ private:
+  class impl;
+  std::unique_ptr<impl> pimpl_;
 };
 
-}
-
+}  // namespace textray
