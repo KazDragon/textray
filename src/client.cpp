@@ -79,7 +79,8 @@ class client::impl  // NOLINT
     terminal_ << terminalpp::enable_mouse();
 
     connection_.async_get_terminal_type(
-        [](std::string const &terminal_type) {
+        [](std::string const &terminal_type)
+        {
           std::cout << "connection from terminal: " << terminal_type << "\n";
         });
 
@@ -307,18 +308,18 @@ class client::impl  // NOLINT
     }
   }
 
-  void event(boost::any const &ev)
+  void event(std::any const &ev)
   {
     // General key handler for movement
     bool consumed = false;
-    auto const *vk = boost::any_cast<terminalpp::virtual_key>(&ev);
+    auto const *vk = std::any_cast<terminalpp::virtual_key>(&ev);
 
     if (vk != nullptr)
     {
       consumed = keypress_event(*vk);
     }
 
-    auto const *mouse = boost::any_cast<terminalpp::mouse::event>(&ev);
+    auto const *mouse = std::any_cast<terminalpp::mouse::event>(&ev);
 
     if (mouse != nullptr)
     {
@@ -375,7 +376,7 @@ class client::impl  // NOLINT
       connection_.async_read(
           [this](serverpp::bytes data)
           { cache_.append(data.begin(), data.end()); },
-          [=]()
+          [this, callback]()
           {
             serverpp::byte_storage callback_data;
             std::swap(cache_, callback_data);
@@ -434,10 +435,10 @@ client::client(
     std::function<void(client const &)> const &connection_died,
     std::function<void()> const &shutdown)
   : pimpl_(boost::make_unique<impl>(
-      std::move(cnx),
-      io_context,
-      [this, connection_died]() { connection_died(*this); },
-      shutdown))
+        std::move(cnx),
+        io_context,
+        [this, connection_died]() { connection_died(*this); },
+        shutdown))
 {
 }
 
