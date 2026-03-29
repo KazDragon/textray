@@ -19,6 +19,10 @@ jobs:
     env:
       BUILD_TYPE: ${{ matrix.build_type }}
       EXTERNAL_ROOT: ${{ github.workspace }}/.ext
+      SERVERPP_REF: "master"
+      TELNETPP_REF: "master"
+      TERMINALPP_REF: "master"
+      MUNIN_REF: "master"
       SERVERPP_VERSION: "0.2.0"
       TELNETPP_VERSION: "3.0.0"
       TERMINALPP_VERSION: "4.0.1"
@@ -54,14 +58,22 @@ jobs:
           nlohmann-json
           zlib
 
+      - name: Report dependency heads
+        shell: bash
+        run: |
+          echo "serverpp  @ $(git ls-remote https://github.com/KazDragon/serverpp.git "refs/heads/${SERVERPP_REF}" | cut -f1)"
+          echo "telnetpp  @ $(git ls-remote https://github.com/KazDragon/telnetpp.git "refs/heads/${TELNETPP_REF}" | cut -f1)"
+          echo "terminalpp@ $(git ls-remote https://github.com/KazDragon/terminalpp.git "refs/heads/${TERMINALPP_REF}" | cut -f1)"
+          echo "munin     @ $(git ls-remote https://github.com/KazDragon/munin.git "refs/heads/${MUNIN_REF}" | cut -f1)"
+
       - name: Install Server++ dependency
         shell: bash
         run: |
           mkdir -p "$EXTERNAL_ROOT"
           cd "${{ runner.workspace }}"
-          wget "https://github.com/KazDragon/serverpp/archive/v${SERVERPP_VERSION}.tar.gz"
-          tar -xzf "v${SERVERPP_VERSION}.tar.gz"
-          cmake -S "serverpp-${SERVERPP_VERSION}" -B serverpp-build \
+          wget "https://codeload.github.com/KazDragon/serverpp/tar.gz/refs/heads/${SERVERPP_REF}" -O serverpp.tar.gz
+          tar -xzf serverpp.tar.gz
+          cmake -S "serverpp-${SERVERPP_REF}" -B serverpp-build \
             -DCMAKE_BUILD_TYPE="$BUILD_TYPE" \
             -DCMAKE_INSTALL_PREFIX="$EXTERNAL_ROOT" \
             -DCMAKE_TOOLCHAIN_FILE="$VCPKG_ROOT/scripts/buildsystems/vcpkg.cmake" \
@@ -73,9 +85,9 @@ jobs:
         shell: bash
         run: |
           cd "${{ runner.workspace }}"
-          wget "https://github.com/KazDragon/telnetpp/archive/v${TELNETPP_VERSION}.tar.gz"
-          tar -xzf "v${TELNETPP_VERSION}.tar.gz"
-          cmake -S "telnetpp-${TELNETPP_VERSION}" -B telnetpp-build \
+          wget "https://codeload.github.com/KazDragon/telnetpp/tar.gz/refs/heads/${TELNETPP_REF}" -O telnetpp.tar.gz
+          tar -xzf telnetpp.tar.gz
+          cmake -S "telnetpp-${TELNETPP_REF}" -B telnetpp-build \
             -DCMAKE_BUILD_TYPE="$BUILD_TYPE" \
             -DCMAKE_INSTALL_PREFIX="$EXTERNAL_ROOT" \
             -DCMAKE_PREFIX_PATH="$EXTERNAL_ROOT" \
@@ -90,9 +102,9 @@ jobs:
         shell: bash
         run: |
           cd "${{ runner.workspace }}"
-          wget "https://github.com/KazDragon/terminalpp/archive/v${TERMINALPP_VERSION}.tar.gz"
-          tar -xzf "v${TERMINALPP_VERSION}.tar.gz"
-          cmake -S "terminalpp-${TERMINALPP_VERSION}" -B terminalpp-build \
+          wget "https://codeload.github.com/KazDragon/terminalpp/tar.gz/refs/heads/${TERMINALPP_REF}" -O terminalpp.tar.gz
+          tar -xzf terminalpp.tar.gz
+          cmake -S "terminalpp-${TERMINALPP_REF}" -B terminalpp-build \
             -DCMAKE_BUILD_TYPE="$BUILD_TYPE" \
             -DCMAKE_INSTALL_PREFIX="$EXTERNAL_ROOT" \
             -DCMAKE_PREFIX_PATH="$EXTERNAL_ROOT" \
@@ -106,9 +118,9 @@ jobs:
         shell: bash
         run: |
           cd "${{ runner.workspace }}"
-          wget "https://github.com/KazDragon/munin/archive/v${MUNIN_VERSION}.tar.gz"
-          tar -xzf "v${MUNIN_VERSION}.tar.gz"
-          cmake -S "munin-${MUNIN_VERSION}" -B munin-build \
+          wget "https://codeload.github.com/KazDragon/munin/tar.gz/refs/heads/${MUNIN_REF}" -O munin.tar.gz
+          tar -xzf munin.tar.gz
+          cmake -S "munin-${MUNIN_REF}" -B munin-build \
             -DCMAKE_BUILD_TYPE="$BUILD_TYPE" \
             -DCMAKE_INSTALL_PREFIX="$EXTERNAL_ROOT" \
             -DCMAKE_PREFIX_PATH="$EXTERNAL_ROOT" \
