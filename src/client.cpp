@@ -13,6 +13,7 @@
 #include <boost/make_unique.hpp>
 #include <boost/range/algorithm/find_if.hpp>
 #include <boost/range/algorithm/for_each.hpp>
+#include <any>
 #include <atomic>
 #include <cmath>
 #include <utility>
@@ -95,7 +96,7 @@ class client::impl  // NOLINT
         [this]
         {
           repaint_requested_ = true;
-          strand_.post([this] { on_repaint(); });
+          boost::asio::post(strand_, [this] { on_repaint(); });
         });
     window_.on_repaint_request();
 
@@ -307,18 +308,18 @@ class client::impl  // NOLINT
     }
   }
 
-  void event(boost::any const &ev)
+  void event(std::any const &ev)
   {
     // General key handler for movement
     bool consumed = false;
-    auto const *vk = boost::any_cast<terminalpp::virtual_key>(&ev);
+    auto const *vk = std::any_cast<terminalpp::virtual_key>(&ev);
 
     if (vk != nullptr)
     {
       consumed = keypress_event(*vk);
     }
 
-    auto const *mouse = boost::any_cast<terminalpp::mouse::event>(&ev);
+    auto const *mouse = std::any_cast<terminalpp::mouse::event>(&ev);
 
     if (mouse != nullptr)
     {
