@@ -8,7 +8,7 @@ endif()
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
-find_package(Boost 1.69.0 REQUIRED COMPONENTS container program_options)
+find_package(Boost 1.69.0 REQUIRED COMPONENTS container format program_options)
 if (NOT TARGET KazDragon::serverpp)
     find_package(serverpp 0.2.0 REQUIRED)
 endif()
@@ -59,6 +59,7 @@ target_link_libraries(textray
         KazDragon::terminalpp
         KazDragon::munin
         Boost::boost
+        Boost::format
         Boost::program_options
         Threads::Threads
 )

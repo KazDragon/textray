@@ -50,6 +50,7 @@ jobs:
           boost-algorithm
           boost-exception
           boost-container
+          boost-format
           boost-program-options
           boost-container-hash
           boost-scope-exit
