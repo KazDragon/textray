@@ -8,7 +8,7 @@ endif()
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
-find_package(Boost 1.69.0 REQUIRED COMPONENTS container program_options)
+find_package(Boost 1.69.0 REQUIRED COMPONENTS container format program_options)
 if (NOT TARGET KazDragon::serverpp)
     find_package(serverpp 0.2.0 REQUIRED)
 endif()
@@ -30,10 +30,7 @@ if (NOT TARGET KazDragon::munin)
     find_package(munin 0.7.1 REQUIRED)
 endif()
 
-find_package(gsl-lite 1.0.0 QUIET)
-if (NOT gsl-lite_FOUND)
-    find_package(gsl-lite 0.38.0 REQUIRED)
-endif()
+find_package(gsl-lite CONFIG REQUIRED)
 find_package(fmt 5.3 REQUIRED)
 find_package(nlohmann_json 3.3.0 REQUIRED)
 find_package(ZLIB REQUIRED)
@@ -62,6 +59,7 @@ target_link_libraries(textray
         KazDragon::terminalpp
         KazDragon::munin
         Boost::boost
+        Boost::format
         Boost::program_options
         Threads::Threads
 )

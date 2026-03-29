@@ -80,7 +80,8 @@ class client::impl  // NOLINT
     terminal_ << terminalpp::enable_mouse();
 
     connection_.async_get_terminal_type(
-        [](std::string const &terminal_type) {
+        [](std::string const &terminal_type)
+        {
           std::cout << "connection from terminal: " << terminal_type << "\n";
         });
 
@@ -376,7 +377,7 @@ class client::impl  // NOLINT
       connection_.async_read(
           [this](serverpp::bytes data)
           { cache_.append(data.begin(), data.end()); },
-          [=]()
+          [=, this]()
           {
             serverpp::byte_storage callback_data;
             std::swap(cache_, callback_data);
@@ -434,11 +435,12 @@ client::client(
     boost::asio::io_context &io_context,
     std::function<void(client const &)> const &connection_died,
     std::function<void()> const &shutdown)
-  : pimpl_(boost::make_unique<impl>(
-      std::move(cnx),
-      io_context,
-      [this, connection_died]() { connection_died(*this); },
-      shutdown))
+  : pimpl_(
+        boost::make_unique<impl>(
+            std::move(cnx),
+            io_context,
+            [this, connection_died]() { connection_died(*this); },
+            shutdown))
 {
 }
 
