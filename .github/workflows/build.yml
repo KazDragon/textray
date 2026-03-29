@@ -1,0 +1,137 @@
+name: build
+
+on:
+  pull_request:
+  push:
+    branches:
+      - master
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    strategy:
+      matrix:
+        include:
+          - build_type: Debug
+          - build_type: Release
+
+    env:
+      BUILD_TYPE: ${{ matrix.build_type }}
+      EXTERNAL_ROOT: ${{ github.workspace }}/.ext
+      SERVERPP_VERSION: "0.2.0"
+      TELNETPP_VERSION: "3.0.0"
+      TERMINALPP_VERSION: "4.0.1"
+      MUNIN_VERSION: "0.7.1"
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Setup vcpkg (with binary caching)
+        uses: lukka/run-vcpkg@v11
+        with:
+          runVcpkgInstall: false
+          vcpkgDirectory: "${{ github.workspace }}/.vcpkg"
+          vcpkgGitCommitId: "58950f88544e4637524dbd6a01d0317cf4cb77fc"
+
+      - name: Install third-party dependencies
+        shell: bash
+        run: >
+          $VCPKG_ROOT/vcpkg install
+          boost-asio
+          boost-range
+          boost-signals2
+          boost-algorithm
+          boost-exception
+          boost-container
+          boost-program-options
+          boost-container-hash
+          boost-scope-exit
+          fmt
+          gsl-lite
+          nlohmann-json
+          zlib
+
+      - name: Install Server++ dependency
+        shell: bash
+        run: |
+          mkdir -p "$EXTERNAL_ROOT"
+          cd "${{ runner.workspace }}"
+          wget "https://github.com/KazDragon/serverpp/archive/v${SERVERPP_VERSION}.tar.gz"
+          tar -xzf "v${SERVERPP_VERSION}.tar.gz"
+          cmake -S "serverpp-${SERVERPP_VERSION}" -B serverpp-build \
+            -DCMAKE_BUILD_TYPE="$BUILD_TYPE" \
+            -DCMAKE_INSTALL_PREFIX="$EXTERNAL_ROOT" \
+            -DCMAKE_TOOLCHAIN_FILE="$VCPKG_ROOT/scripts/buildsystems/vcpkg.cmake" \
+            -DSERVERPP_VERSION="$SERVERPP_VERSION"
+          cmake --build serverpp-build --config "$BUILD_TYPE"
+          cmake --install serverpp-build --config "$BUILD_TYPE"
+
+      - name: Install Telnet++ dependency
+        shell: bash
+        run: |
+          cd "${{ runner.workspace }}"
+          wget "https://github.com/KazDragon/telnetpp/archive/v${TELNETPP_VERSION}.tar.gz"
+          tar -xzf "v${TELNETPP_VERSION}.tar.gz"
+          cmake -S "telnetpp-${TELNETPP_VERSION}" -B telnetpp-build \
+            -DCMAKE_BUILD_TYPE="$BUILD_TYPE" \
+            -DCMAKE_INSTALL_PREFIX="$EXTERNAL_ROOT" \
+            -DCMAKE_PREFIX_PATH="$EXTERNAL_ROOT" \
+            -DCMAKE_TOOLCHAIN_FILE="$VCPKG_ROOT/scripts/buildsystems/vcpkg.cmake" \
+            -DTELNETPP_WITH_TESTS=False \
+            -DTELNETPP_WITH_ZLIB=True \
+            -DTELNETPP_VERSION="$TELNETPP_VERSION"
+          cmake --build telnetpp-build --config "$BUILD_TYPE"
+          cmake --install telnetpp-build --config "$BUILD_TYPE"
+
+      - name: Install Terminal++ dependency
+        shell: bash
+        run: |
+          cd "${{ runner.workspace }}"
+          wget "https://github.com/KazDragon/terminalpp/archive/v${TERMINALPP_VERSION}.tar.gz"
+          tar -xzf "v${TERMINALPP_VERSION}.tar.gz"
+          cmake -S "terminalpp-${TERMINALPP_VERSION}" -B terminalpp-build \
+            -DCMAKE_BUILD_TYPE="$BUILD_TYPE" \
+            -DCMAKE_INSTALL_PREFIX="$EXTERNAL_ROOT" \
+            -DCMAKE_PREFIX_PATH="$EXTERNAL_ROOT" \
+            -DCMAKE_TOOLCHAIN_FILE="$VCPKG_ROOT/scripts/buildsystems/vcpkg.cmake" \
+            -DTERMINALPP_WITH_TESTS=False \
+            -DTERMINALPP_VERSION="$TERMINALPP_VERSION"
+          cmake --build terminalpp-build --config "$BUILD_TYPE"
+          cmake --install terminalpp-build --config "$BUILD_TYPE"
+
+      - name: Install Munin dependency
+        shell: bash
+        run: |
+          cd "${{ runner.workspace }}"
+          wget "https://github.com/KazDragon/munin/archive/v${MUNIN_VERSION}.tar.gz"
+          tar -xzf "v${MUNIN_VERSION}.tar.gz"
+          cmake -S "munin-${MUNIN_VERSION}" -B munin-build \
+            -DCMAKE_BUILD_TYPE="$BUILD_TYPE" \
+            -DCMAKE_INSTALL_PREFIX="$EXTERNAL_ROOT" \
+            -DCMAKE_PREFIX_PATH="$EXTERNAL_ROOT" \
+            -DCMAKE_TOOLCHAIN_FILE="$VCPKG_ROOT/scripts/buildsystems/vcpkg.cmake" \
+            -DMUNIN_WITH_TESTS=False \
+            -DMUNIN_WITH_CONSOLEPP=False \
+            -DMUNIN_VERSION="$MUNIN_VERSION"
+          cmake --build munin-build --config "$BUILD_TYPE"
+          cmake --install munin-build --config "$BUILD_TYPE"
+
+      - name: Create Build Environment
+        run: cmake -E make_directory ${{runner.workspace}}/textray/build
+
+      - name: Configure CMake
+        shell: bash
+        working-directory: ${{runner.workspace}}/textray/build
+        run: >
+          cmake $GITHUB_WORKSPACE
+          -DCMAKE_BUILD_TYPE=$BUILD_TYPE
+          -DCMAKE_PREFIX_PATH=$EXTERNAL_ROOT
+          -DCMAKE_TOOLCHAIN_FILE=$VCPKG_ROOT/scripts/buildsystems/vcpkg.cmake
+
+      - name: Build textray target
+        shell: bash
+        working-directory: ${{runner.workspace}}/textray/build
+        run: cmake --build . --config $BUILD_TYPE --target textray
