@@ -13,7 +13,6 @@ a text-based ray-casted 3D landscape.
 - CMake 3.12+
 - Boost 1.69+ (`container`, `format`, `program_options`)
 - `gsl-lite`
-- `fmt` 5.3+
 - `nlohmann_json` 3.3.0+
 - `zlib`
 - `Threads`

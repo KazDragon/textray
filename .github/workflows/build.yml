@@ -54,7 +54,6 @@ jobs:
           boost-program-options
           boost-container-hash
           boost-scope-exit
-          fmt
           gsl-lite
           nlohmann-json
           zlib
