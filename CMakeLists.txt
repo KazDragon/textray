@@ -31,7 +31,6 @@ if (NOT TARGET KazDragon::munin)
 endif()
 
 find_package(gsl-lite CONFIG REQUIRED)
-find_package(fmt 5.3 REQUIRED)
 find_package(nlohmann_json 3.3.0 REQUIRED)
 find_package(ZLIB REQUIRED)
 find_package(Threads REQUIRED)
